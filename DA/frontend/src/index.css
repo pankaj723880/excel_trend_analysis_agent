@@ -227,6 +227,32 @@ html.light h1, .light h1,
 
   .select {
     @apply input cursor-pointer appearance-none pr-8;
+    background-color: #0F172A;
+    color: #F8FAFC;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.6rem center;
+    background-repeat: no-repeat;
+    background-size: 1.25em 1.25em;
+  }
+
+  /* Dropdown option items in browser picker */
+  select option {
+    background-color: #0F172A !important;
+    color: #F1F5F9 !important;
+    padding: 8px 12px;
+  }
+
+  select option:hover,
+  select option:focus,
+  select option:checked {
+    background-color: #1E293B !important;
+    color: #38BDF8 !important;
+  }
+
+  select optgroup {
+    background-color: #0B1120 !important;
+    color: #94A3B8 !important;
+    font-weight: 600;
   }
 
   .section-label {
