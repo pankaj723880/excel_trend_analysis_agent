@@ -1,18 +1,39 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Check, Moon, Settings, Sun, UploadCloud, X } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { Check, Moon, Settings, Sun, UploadCloud, X, ChevronRight, Sparkles, FileSpreadsheet, RefreshCw } from 'lucide-react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
 import { useWorkbook } from '../context/WorkbookContext'
 import { formatFileSize } from '../utils/format'
 
+const ROUTE_LABELS = {
+  '/': 'Executive Dashboard',
+  '/mis': 'MIS Overview',
+  '/cleaning': 'Data Cleaning Studio',
+  '/explorer': 'Data Explorer',
+  '/eda': 'EDA Profiler',
+  '/quality': 'Data Quality Assessment',
+  '/trends': 'Trend Analysis & Forecasting',
+  '/anomalies': 'Anomaly Detection',
+  '/correlations': 'Correlation Matrix',
+  '/kpis': 'KPI Benchmarks',
+  '/ai-analyst': 'Gemini AI Analyst',
+  '/ask-data': 'Ask Your Data',
+  '/ai-reports': 'Automated AI Reports',
+  '/downloads': 'Reports & Export',
+  '/history': 'Audit & History',
+  '/settings': 'System Settings',
+}
+
 export default function Header() {
-  const { filename, overview, handleUpload } = useWorkbook()
+  const { filename, overview, handleUpload, refreshWorkbook } = useWorkbook()
   const { themeMode, setThemeMode } = useTheme()
   const navigate = useNavigate()
+  const location = useLocation()
   const fileInputRef = useRef(null)
   const settingsRef = useRef(null)
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const currentTitle = ROUTE_LABELS[location.pathname] || 'Workspace'
 
   const onDirectUpload = async (e) => {
     const file = e.target.files?.[0]
@@ -64,11 +85,9 @@ export default function Header() {
 
   return (
     <header
-      className="h-16 shrink-0 w-full max-w-full px-4 sm:px-6 flex items-center justify-between border-b border-white/10 sticky top-0 z-30 box-border"
+      className="h-16 shrink-0 w-full max-w-full px-4 sm:px-6 flex items-center justify-between border-b border-white/[0.08] sticky top-0 z-30 box-border backdrop-blur-xl"
       style={{
-        background: 'rgba(9, 14, 26, 0.8)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
+        background: 'rgba(8, 12, 22, 0.75)',
       }}
     >
       <input
@@ -79,47 +98,59 @@ export default function Header() {
         onChange={onDirectUpload}
       />
 
-      <div className="flex items-center gap-4">
-        <div>
-          <h1 className="text-[15px] font-bold text-ink leading-tight flex items-center gap-2">
-            Excel Intelligence
+      {/* Left: Breadcrumbs & Page Context */}
+      <div className="flex items-center gap-2.5 min-w-0">
+        <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted font-medium">
+          <span className="hover:text-ink cursor-pointer transition-colors" onClick={() => navigate('/')}>
+            Intelligence
+          </span>
+          <ChevronRight size={13} className="text-muted/60" />
+        </div>
+        <div className="min-w-0">
+          <h1 className="text-[14px] sm:text-[15px] font-bold text-ink leading-tight truncate flex items-center gap-2">
+            {currentTitle}
           </h1>
-          <p className="text-[11px] text-muted leading-tight">AI-Powered Enterprise Data Analyst</p>
         </div>
       </div>
 
-      <div className="flex items-center gap-3 relative" ref={settingsRef}>
+      {/* Right: Status Pill & Consolidated Actions */}
+      <div className="flex items-center gap-2.5 relative shrink-0" ref={settingsRef}>
         {filename ? (
-          <div className="hidden md:flex items-center gap-2 text-[12px] bg-white/[0.04] border border-white/10 px-3.5 py-1.5 rounded-full backdrop-blur-md">
-            <span className="h-2 w-2 rounded-full bg-positive animate-pulse" />
-            <span className="font-semibold text-ink truncate max-w-[180px]">{filename}</span>
-            <span className="text-muted">·</span>
-            <span className="text-positive text-[11px] font-medium">Engine Active</span>
+          <div className="hidden md:flex items-center gap-2 text-[12px] bg-white/[0.03] border border-white/[0.08] hover:border-white/[0.15] px-3 py-1.5 rounded-full backdrop-blur-md transition-colors">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-positive opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-positive" />
+            </span>
+            <span className="font-semibold text-ink truncate max-w-[150px] lg:max-w-[220px]" title={filename}>{filename}</span>
+            <span className="text-muted/40">|</span>
+            <span className="text-primary text-[11px] font-medium flex items-center gap-1">
+              Active
+            </span>
           </div>
         ) : (
-          <div className="hidden md:flex items-center gap-2 text-[12px] bg-white/[0.04] border border-white/10 px-3.5 py-1.5 rounded-full text-muted backdrop-blur-md">
-            <span className="h-2 w-2 rounded-full bg-warning" />
-            <span>No workbook loaded</span>
+          <div className="hidden md:flex items-center gap-2 text-[11.5px] bg-white/[0.02] border border-white/[0.06] px-3 py-1.5 rounded-full text-muted backdrop-blur-md">
+            <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+            <span>Ready for Excel</span>
           </div>
         )}
 
         <button
-          className="btn-primary text-[12px] px-3.5 py-2 cursor-pointer flex items-center gap-2"
+          className="btn-primary text-[12px] px-3.5 py-1.5 rounded-lg cursor-pointer flex items-center gap-2 shadow-glow-blue"
           onClick={() => fileInputRef.current?.click()}
-          title="Directly select and upload an Excel worksheet"
+          title="Upload Excel spreadsheet for instant AI analysis"
         >
-          <UploadCloud size={15} />
-          <span>Upload Excel</span>
+          <UploadCloud size={14} />
+          <span className="hidden sm:inline">Upload Excel</span>
         </button>
 
         <button
-          className={`h-9 w-9 rounded-lg border border-white/10 hover:border-white/20 bg-white/[0.03] hover:bg-white/[0.06] flex items-center justify-center text-muted hover:text-ink cursor-pointer transition-all ${
+          className={`h-8 w-8 rounded-lg border border-white/[0.08] hover:border-white/[0.2] bg-white/[0.02] hover:bg-white/[0.05] flex items-center justify-center text-muted hover:text-ink cursor-pointer transition-all ${
             isSettingsOpen ? 'bg-primary/15 text-primary border-primary/40' : ''
           }`}
           title="Settings"
           onClick={() => setIsSettingsOpen((prev) => !prev)}
         >
-          <Settings size={15} className={isSettingsOpen ? 'rotate-45 transition-transform duration-200' : 'transition-transform duration-200'} />
+          <Settings size={14} className={isSettingsOpen ? 'rotate-45 transition-transform duration-200' : 'transition-transform duration-200'} />
         </button>
 
         {/* Settings Dropdown Popover */}

@@ -78,31 +78,29 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`fixed top-0 left-0 bottom-0 z-40 transition-all duration-300 ease-in-out flex flex-col select-none border-r border-white/10 ${
+      className={`fixed top-0 left-0 bottom-0 z-40 transition-all duration-300 ease-in-out flex flex-col select-none border-r border-white/[0.08] backdrop-blur-2xl ${
         collapsed ? 'w-20' : 'w-64'
       }`}
       style={{
-        background: 'rgba(9, 14, 26, 0.88)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
+        background: 'rgba(10, 15, 29, 0.82)',
       }}
     >
       {/* Brand Header */}
-      <div className="h-16 px-4 flex items-center justify-between border-b border-white/10">
+      <div className="h-16 px-4 flex items-center justify-between border-b border-white/[0.08]">
         <div className="flex items-center gap-3 overflow-hidden">
-          <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0 shadow-glow-blue">
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary/20 to-ai/20 border border-primary/30 flex items-center justify-center shrink-0 shadow-glow-blue">
             <BarChart3 size={18} className="text-primary" />
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <div className="text-[13.5px] font-bold text-ink leading-tight truncate">Excel Intelligence</div>
-              <div className="text-[10px] font-medium text-muted tracking-wide uppercase">AI Data Analyst</div>
+              <div className="text-[13.5px] font-bold text-ink leading-tight truncate tracking-tight">Excel Intelligence</div>
+              <div className="text-[10px] font-semibold text-primary/80 tracking-wider uppercase">AI Enterprise Analyst</div>
             </div>
           )}
         </div>
         <button
           onClick={toggleSidebar}
-          className="h-7 w-7 rounded-lg border border-white/10 hover:border-white/20 hover:bg-white/5 flex items-center justify-center text-muted hover:text-ink transition-colors cursor-pointer"
+          className="h-7 w-7 rounded-lg border border-white/[0.08] hover:border-white/[0.2] hover:bg-white/[0.05] flex items-center justify-center text-muted hover:text-ink transition-colors cursor-pointer"
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
@@ -110,12 +108,12 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation Sections */}
-      <nav className="flex-1 py-4 px-2.5 space-y-5 overflow-y-auto">
+      <nav className="flex-1 py-4 px-2.5 space-y-4 overflow-y-auto">
         {NAV_GROUPS.map((group) => (
           <div key={group.label}>
             {!collapsed && (
-              <div className="text-[10px] font-bold uppercase tracking-wider text-muted/70 px-2.5 mb-1.5">
-                {group.label}
+              <div className="text-[10px] font-bold uppercase tracking-wider text-muted/60 px-2.5 mb-1.5 flex items-center justify-between">
+                <span>{group.label}</span>
               </div>
             )}
             <div className="space-y-0.5">
@@ -127,20 +125,20 @@ export default function Sidebar() {
                   title={collapsed ? item.label : undefined}
                   className={({ isActive }) =>
                     `group relative flex items-center gap-2.5 rounded-lg transition-all duration-150 ${
-                      collapsed ? 'justify-center p-2.5' : 'px-2.5 py-2 text-[12.5px]'
+                      collapsed ? 'justify-center p-2.5' : 'px-2.5 py-2 text-[12px]'
                     } ${
                       isActive
                         ? item.isAi
                           ? 'bg-ai/15 text-ink font-semibold border border-ai/30 shadow-glow-purple'
                           : 'bg-primary/15 text-ink font-semibold border border-primary/30 shadow-glow-blue'
-                        : 'text-secondary/70 hover:text-ink hover:bg-white/5 font-medium'
+                        : 'text-secondary/70 hover:text-ink hover:bg-white/[0.04] font-medium'
                     }`
                   }
                 >
                   {({ isActive }) => (
                     <>
                       <item.icon
-                        size={17}
+                        size={16}
                         className={`shrink-0 transition-colors ${
                           isActive
                             ? item.isAi
@@ -150,6 +148,11 @@ export default function Sidebar() {
                         }`}
                       />
                       {!collapsed && <span className="truncate">{item.label}</span>}
+                      {isActive && (
+                        <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full ${
+                          item.isAi ? 'bg-ai' : 'bg-primary'
+                        }`} />
+                      )}
                     </>
                   )}
                 </NavLink>
