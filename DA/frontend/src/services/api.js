@@ -102,8 +102,17 @@ export async function getCleanedPreview(workbookId, sheetName) {
 
 // ---------- AI ----------
 
-export async function askQuestion(workbookId, question) {
-  const { data } = await client.post('/ask', { workbook_id: workbookId, question })
+export async function askQuestion(workbookIdOrObj, maybeQuestion) {
+  let workbook_id = ''
+  let question = ''
+  if (typeof workbookIdOrObj === 'object' && workbookIdOrObj !== null) {
+    workbook_id = workbookIdOrObj.workbook_id || workbookIdOrObj.workbookId
+    question = workbookIdOrObj.question
+  } else {
+    workbook_id = workbookIdOrObj
+    question = maybeQuestion
+  }
+  const { data } = await client.post('/ask', { workbook_id, question })
   return data
 }
 
