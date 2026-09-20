@@ -136,7 +136,7 @@ export async function getWorkbookInsights(workbookId) {
 // ---------- Export ----------
 
 export function getExportUrl(workbookId) {
-  return `/api/export/${workbookId}`
+  return `${API_BASE}/export/${workbookId}`
 }
 
 export function getReportHtmlUrl(workbookId) {
