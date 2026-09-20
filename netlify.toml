@@ -3,6 +3,17 @@
   publish = "dist"
   command = "npm run build"
 
+[build.environment]
+  VITE_API_URL = "https://exceltrendanalyst1.onrender.com/api"
+
+# Proxy /api requests directly to Render backend (avoids CORS and mixed content issues)
+[[redirects]]
+  from = "/api/*"
+  to = "https://exceltrendanalyst1.onrender.com/api/:splat"
+  status = 200
+  force = true
+
+# Single Page Application fallback
 [[redirects]]
   from = "/*"
   to = "/index.html"

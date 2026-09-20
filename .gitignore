@@ -10,10 +10,11 @@ venv/
 ENV/
 env/
 
-# Environment variables & secrets
+# Environment variables & secrets (keep .env.production tracked for frontend API endpoint)
 .env
 .env*.local
 *.env
+!DA/frontend/.env.production
 
 # Testing & caches
 .pytest_cache/
