@@ -34,14 +34,21 @@ async def startup_event():
 async def shutdown_event():
     close_mongo_connection()
 
-# CORS - allow Vite dev server, Netlify, and configurable origins
+# CORS - allow Vite dev server, Vercel, Netlify, and configurable origins
+_default_origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://excel-trend-analysis-agent.vercel.app",
+    "https://agent-6ab00e97922598066035110--exceltrendanalyst.netlify.app",
+]
 _origins_env = os.environ.get("CORS_ORIGINS", "*")
 if _origins_env.strip() == "*":
     origins = ["*"]
 else:
     origins = [origin.strip() for origin in _origins_env.split(",") if origin.strip()]
-    if "http://localhost:5173" not in origins:
-        origins.append("http://localhost:5173")
+    for default_origin in _default_origins:
+        if default_origin not in origins:
+            origins.append(default_origin)
 
 app.add_middleware(
     CORSMiddleware,
