@@ -36,3 +36,7 @@ dist/
 build/
 .npm
 *.log
+
+# Uploaded runtime data
+DA/backend/data/uploads/*
+!DA/backend/data/uploads/.gitkeep
