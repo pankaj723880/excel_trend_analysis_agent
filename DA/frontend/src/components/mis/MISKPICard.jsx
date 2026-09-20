@@ -18,9 +18,9 @@ export default function MISKPICard({ title, value, previous, change, format = 'c
   const isDown = change < 0
 
   return (
-    <div className="card card-pad card-hover flex flex-col justify-between min-h-[105px]">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-1">{title}</div>
-      <div className="text-[24px] font-bold text-ink leading-tight mb-2">{formatVal(value)}</div>
+    <div className="card card-pad card-hover flex flex-col justify-between min-h-[105px] min-w-0 overflow-hidden">
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-1 truncate" title={title}>{title}</div>
+      <div className="text-[20px] 2xl:text-[24px] font-bold text-ink leading-tight mb-2 truncate" title={formatVal(value)}>{formatVal(value)}</div>
 
       <div className="flex items-center justify-between text-[11.5px]">
         <div className="flex items-center gap-1 font-semibold">

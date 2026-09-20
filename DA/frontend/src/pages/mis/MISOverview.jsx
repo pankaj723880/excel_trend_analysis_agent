@@ -44,7 +44,7 @@ export default function MISOverview({ workbookId, filters }) {
       </div>
 
       {/* Row 1: Executive KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 min-w-0">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 min-w-0">
         {(data.kpis || []).map((kpi, idx) => (
           <MISKPICard key={idx} {...kpi} />
         ))}
