@@ -1,0 +1,311 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Glass Analytics Premium Enterprise Theme */
+:root {
+  color-scheme: dark;
+  --bg-default-rgb: 7, 11, 20;
+  --bg-sidebar-rgb: 9, 14, 26;
+  --bg-card-rgb: 13, 19, 33;
+  --borderline-rgb: 255, 255, 255;
+  --borderline-alpha: 0.10;
+  --ink-rgb: 248, 250, 252;
+  --muted-rgb: 100, 116, 139;
+  --secondary-rgb: 203, 213, 225;
+  --primary-rgb: 96, 165, 250;
+  --ai-rgb: 167, 139, 250;
+  --positive-rgb: 52, 211, 153;
+  --negative-rgb: 251, 113, 133;
+  --warning-rgb: 251, 191, 36;
+  
+  --bg-default: #070B14;
+  --bg-sidebar: #090E1A;
+  --bg-card: rgba(255, 255, 255, 0.05);
+  --bg-card-hover: rgba(255, 255, 255, 0.08);
+  --borderline: rgba(255, 255, 255, 0.10);
+  --borderline-hover: rgba(255, 255, 255, 0.18);
+  
+  --primary: #60A5FA;
+  --primary-hover: #3B82F6;
+  --ai: #A78BFA;
+  --ai-hover: #8B5CF6;
+  --positive: #34D399;
+  --negative: #FB7185;
+  --warning: #FBBF24;
+  
+  --ink: #F8FAFC;
+  --secondary: #CBD5E1;
+  --muted: #64748B;
+  --subtle: #475569;
+  
+  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --shadow-glow-blue: 0 0 25px -5px rgba(96, 165, 250, 0.25);
+  --shadow-glow-purple: 0 0 25px -5px rgba(167, 139, 250, 0.25);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  background-color: var(--bg-default);
+  color: var(--ink);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background: radial-gradient(circle at 50% 0%, rgba(96, 165, 250, 0.03) 0%, transparent 75%),
+              radial-gradient(circle at 100% 100%, rgba(167, 139, 250, 0.02) 0%, transparent 60%),
+              #070B14;
+}
+
+body {
+  background-color: var(--bg-default);
+  color: var(--ink);
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* ---------- DIRECT LIGHT MODE OVERRIDES ---------- */
+html.light body,
+.light body {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+/* Force dark text on all general HTML elements in Light mode */
+html.light h1, .light h1,
+/* ---------- Glass Analytics Foundation ---------- */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.25);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.065);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.4);
+}
+
+.glass-card-ai {
+  background: radial-gradient(circle at top right, rgba(167, 139, 250, 0.08) 0%, rgba(255, 255, 255, 0.04) 70%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(167, 139, 250, 0.22);
+  box-shadow: 0 8px 32px -4px rgba(167, 139, 250, 0.12);
+}
+
+/* ---------- Scrollbars ---------- */
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* ---------- Reusable Component Utilities ---------- */
+@layer components {
+  .settings-popover {
+    background: rgba(13, 19, 33, 0.95) !important;
+    backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6) !important;
+    z-index: 100 !important;
+  }
+
+  .card {
+    @apply glass-card rounded-xl text-ink;
+  }
+
+  .card-hover {
+    @apply glass-card rounded-xl text-ink;
+  }
+
+  .card-pad {
+    @apply p-5;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all duration-150 select-none cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn text-white shadow-sm active:scale-[0.98];
+    background: #60A5FA;
+    color: #070B14;
+    font-weight: 700;
+  }
+  .btn-primary:hover {
+    background: #93C5FD;
+    box-shadow: 0 0 16px rgba(96, 165, 250, 0.4);
+  }
+
+  .btn-ai {
+    @apply btn text-white shadow-sm active:scale-[0.98];
+    background: #A78BFA;
+    color: #070B14;
+    font-weight: 700;
+  }
+  .btn-ai:hover {
+    background: #C4B5FD;
+    box-shadow: 0 0 16px rgba(167, 139, 250, 0.4);
+  }
+
+  .btn-secondary {
+    @apply btn text-ink;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.09);
+    border-color: rgba(255, 255, 255, 0.22);
+  }
+
+  .btn-ghost {
+    @apply btn text-slate-300;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #F8FAFC;
+    border-color: rgba(255, 255, 255, 0.16);
+  }
+
+  .btn-danger {
+    @apply btn text-white;
+    background: rgba(251, 113, 133, 0.2);
+    border: 1px solid rgba(251, 113, 133, 0.4);
+    color: #FB7185;
+  }
+  .btn-danger:hover {
+    background: rgba(251, 113, 133, 0.3);
+    border-color: rgba(251, 113, 133, 0.6);
+  }
+
+  .input {
+    @apply w-full rounded-lg px-3.5 py-2 text-xs text-ink outline-none transition-all;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+  }
+  .input:focus {
+    border-color: #60A5FA;
+    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
+    background: rgba(255, 255, 255, 0.06);
+  }
+  .input::placeholder {
+    color: #64748B;
+  }
+
+  .select {
+    @apply input cursor-pointer appearance-none pr-8;
+  }
+
+  .section-label {
+    @apply text-[11px] font-bold uppercase tracking-wider text-muted;
+  }
+
+  .tag {
+    @apply inline-flex items-center gap-1.5 rounded-md px-2.5 py-0.5 text-xs font-semibold;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+  }
+
+  .table-base {
+    @apply w-full text-xs text-left;
+  }
+
+  .table-base th {
+    @apply px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .table-base td {
+    @apply px-3.5 py-2.5 text-ink/90;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .table-base tbody tr:hover {
+    background: rgba(96, 165, 250, 0.04);
+  }
+}
+
+/* ---------- Markdown (AI output) ---------- */
+.markdown-body h2 {
+  @apply text-base font-bold text-ink mt-5 mb-2 flex items-center gap-2;
+}
+.markdown-body h3 {
+  @apply text-sm font-semibold text-ink mt-3.5 mb-1.5;
+}
+.markdown-body p {
+  @apply text-xs text-slate-300 leading-relaxed my-1.5;
+}
+.markdown-body ul {
+  @apply list-disc pl-5 my-2 space-y-1 text-xs text-slate-300;
+}
+.markdown-body li {
+  @apply text-xs text-slate-300;
+}
+.markdown-body strong {
+  @apply text-ink font-semibold;
+}
+.markdown-body em {
+  @apply text-muted italic;
+}
+.markdown-body code {
+  @apply px-1.5 py-0.5 rounded text-[11px] font-mono text-primary;
+  background: rgba(96, 165, 250, 0.1);
+  border: 1px solid rgba(96, 165, 250, 0.2);
+}
+
+/* ---------- Animations ---------- */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes pulseDot {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.animate-pulse-dot {
+  animation: pulseDot 1.4s ease-in-out infinite;
+}
