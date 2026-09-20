@@ -40,7 +40,7 @@ export default function MISFilterBar({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7 gap-2.5 min-w-0">
         <div>
           <label className="text-[11px] font-semibold text-muted mb-1 block">Department</label>
           <select

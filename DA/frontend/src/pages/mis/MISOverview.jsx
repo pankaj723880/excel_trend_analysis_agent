@@ -34,7 +34,7 @@ export default function MISOverview({ workbookId, filters }) {
   if (!data) return null
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full min-w-0 overflow-hidden">
       {/* Title & Subtitle */}
       <div>
         <h2 className="text-xl font-extrabold text-ink">MIS Overview</h2>
