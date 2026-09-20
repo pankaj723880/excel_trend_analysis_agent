@@ -7,8 +7,11 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Load environment variables from backend/.env before anything else
+# Load environment variables from DA/backend/.env or current working directory
 load_dotenv()
+_backend_env = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+if os.path.exists(_backend_env):
+    load_dotenv(_backend_env, override=False)
 
 from app.api import ai, analysis, cleaning, export, mis, upload, workbooks
 from app.db.mongo import validate_mongo_connection, close_mongo_connection

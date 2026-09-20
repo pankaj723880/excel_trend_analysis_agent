@@ -1,6 +1,7 @@
 """MongoDB connection service & GridFS manager.
 
 Manages persistent database client for Excel Intelligence using PyMongo.
+Compatible with MongoDB Atlas (SRV, TLS/SSL, certifi CA bundles) and local instances.
 Never exposes credentials to the frontend.
 """
 from __future__ import annotations
@@ -13,6 +14,12 @@ from pymongo import MongoClient, ASCENDING
 from pymongo.database import Database
 import gridfs
 
+try:
+    import certifi
+    CA_FILE = certifi.where()
+except Exception:
+    CA_FILE = None
+
 logger = logging.getLogger(__name__)
 
 _CLIENT: MongoClient | None = None
@@ -21,27 +28,39 @@ _FS: gridfs.GridFS | None = None
 
 
 def get_mongo_uri() -> str:
-    """Retrieves MONGODB_URI from environment variables.
+    """Retrieves MongoDB connection string from environment variables.
     
+    Checks MONGODB_URI or MONGO_URI.
     Default fallback for local development: mongodb://localhost:27017/excel_intelligence
     """
-    uri = os.environ.get("MONGODB_URI", "").strip()
+    uri = os.environ.get("MONGODB_URI", "").strip() or os.environ.get("MONGO_URI", "").strip()
     if not uri:
         uri = "mongodb://localhost:27017/excel_intelligence"
     return uri
 
 
 def get_mongo_client() -> MongoClient:
-    """Returns singleton PyMongo client instance."""
+    """Returns singleton PyMongo client instance configured for Atlas & local MongoDB."""
     global _CLIENT
     if _CLIENT is None:
         uri = get_mongo_uri()
         logger.info("Initializing MongoDB connection client...")
-        _CLIENT = MongoClient(
-            uri,
-            serverSelectionTimeoutMS=5000,
-            connectTimeoutMS=5000,
-        )
+
+        # Base connection kwargs
+        client_kwargs: dict[str, Any] = {
+            "serverSelectionTimeoutMS": 10000,
+            "connectTimeoutMS": 10000,
+            "socketTimeoutMS": 45000,
+            "retryWrites": True,
+            "appname": "ExcelTrendAnalyst",
+        }
+
+        # For MongoDB Atlas (mongodb+srv:// or ssl/tls connections), use certifi root certificates
+        if "mongodb+srv://" in uri or "ssl=true" in uri.lower() or "tls=true" in uri.lower():
+            if CA_FILE:
+                client_kwargs["tlsCAFile"] = CA_FILE
+
+        _CLIENT = MongoClient(uri, **client_kwargs)
     return _CLIENT
 
 
@@ -50,13 +69,17 @@ def get_db() -> Database:
     global _DB
     if _DB is None:
         client = get_mongo_client()
-        db_name = "excel_intelligence"
-        try:
-            default_name = client.get_default_database()
-            if default_name is not None:
-                db_name = default_name.name
-        except Exception:
-            pass
+        # Default name or explicit DATABASE_NAME env var
+        db_name = os.environ.get("DATABASE_NAME", "").strip() or os.environ.get("MONGO_DB_NAME", "").strip()
+        if not db_name:
+            try:
+                default_name = client.get_default_database()
+                if default_name is not None and default_name.name:
+                    db_name = default_name.name
+            except Exception:
+                pass
+        if not db_name:
+            db_name = "excel_intelligence"
         _DB = client[db_name]
     return _DB
 
