@@ -64,7 +64,7 @@ export default function Header() {
 
   return (
     <header
-      className="h-16 shrink-0 px-6 flex items-center justify-between border-b border-white/10 sticky top-0 z-30"
+      className="h-16 shrink-0 w-full max-w-full px-4 sm:px-6 flex items-center justify-between border-b border-white/10 sticky top-0 z-30 box-border"
       style={{
         background: 'rgba(9, 14, 26, 0.8)',
         backdropFilter: 'blur(20px)',

@@ -37,10 +37,10 @@ export default function MISChart({
   }
 
   return (
-    <div className="card card-pad">
+    <div className="card card-pad min-w-0 overflow-hidden">
       {title && <h4 className="text-xs font-bold uppercase tracking-wider text-muted mb-3">{title}</h4>}
-      <div style={{ width: '100%', height }}>
-        <ResponsiveContainer>
+      <div className="w-full min-w-0" style={{ height }}>
+        <ResponsiveContainer width="100%" height="100%">
           {type === 'line' ? (
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="#202938" vertical={false} />

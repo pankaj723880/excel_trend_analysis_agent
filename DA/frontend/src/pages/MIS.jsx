@@ -113,7 +113,7 @@ export default function MIS() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-hidden">
       {/* Global MIS Header & Filter Bar */}
       <MISFilterBar
         filters={filters}
@@ -126,7 +126,7 @@ export default function MIS() {
       />
 
       {/* Internal Sub-Navigation Tabs */}
-      <div className="border-b border-glass-border overflow-x-auto">
+      <div className="border-b border-glass-border overflow-x-auto max-w-full">
         <div className="flex items-center gap-1 min-w-max pb-1">
           {TABS.map((tab) => {
             const Icon = tab.icon

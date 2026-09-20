@@ -48,6 +48,8 @@ html,
 body,
 #root {
   min-height: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
   background-color: var(--bg-default);
   color: var(--ink);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
