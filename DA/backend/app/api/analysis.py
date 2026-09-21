@@ -40,6 +40,8 @@ async def get_overview(workbook_id: str):
         "sheets": list(entry["workbook"].keys()),
         "profile": entry["profile"],
         "analysis_ready": bool(analysis),
+        "analysis_version": analysis.get("analysis_version", "2.2.0"),
+        "dataset_hash": analysis.get("dataset_hash"),
         "analysis_summary": {
             "sheet_count": analysis.get("sheet_count") or len(entry.get("workbook", {})),
             "total_rows": analysis.get("total_rows") or sum(len(df) for df in (entry.get("workbook") or {}).values()),
@@ -144,8 +146,15 @@ async def get_eda(workbook_id: str):
             "reason": result.get("reason"),
             "eda": result.get("eda", {}),
             "profile": result.get("profile", {}),
+            "quality": result.get("quality", {}),
+            "validation": result.get("validation", {}),
+            "categorical_inconsistencies": result.get("categorical_inconsistencies", {}),
         }
-    return {"eda": eda}
+    return {
+        "eda": eda,
+        "analysis_version": analysis.get("analysis_version", "2.2.0"),
+        "dataset_hash": analysis.get("dataset_hash"),
+    }
 
 
 @router.get("/workbook/{workbook_id}/trends")

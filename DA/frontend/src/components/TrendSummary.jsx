@@ -1,6 +1,6 @@
 import React from 'react'
 import { TrendingDown, TrendingUp, Minus, Sparkles } from 'lucide-react'
-import { formatNumber, formatPercent, trendColor } from '../utils/format'
+import { formatNumber, formatPercent } from '../utils/format'
 
 function Stat({ label, value, color }) {
   return (
@@ -50,20 +50,25 @@ export default function TrendSummary({ trend }) {
         </div>
 
         <div className="bg-white/[0.03] rounded-xl p-3 border border-white/10 space-y-0.5">
-          <Stat label="Trend score" value={formatNumber(trend.trend_score, 0)} color={color} />
-          <Stat label="Period Change" value={formatPercent(trend.change_pct, 1)} color={color} />
+          <Stat label="Trend Strength" value={`${formatNumber(trend.trend_score, 0)} / 100`} color={color} />
+          <Stat label="Observed Change" value={formatPercent(trend.change_pct, 1)} color={color} />
           <Stat label="Volatility" value={formatPercent(trend.volatility_pct, 1)} color={trend.volatility_pct > 50 ? '#FBBF24' : '#60A5FA'} />
-          <Stat label="Confidence" value={trend.confidence} color={trend.confidence === 'High' ? '#34D399' : trend.confidence === 'Medium' ? '#FBBF24' : '#64748B'} />
+          <Stat label="Statistical Confidence" value={trend.confidence} color={trend.confidence === 'High' ? '#34D399' : trend.confidence === 'Medium' ? '#FBBF24' : '#64748B'} />
           <Stat
-            label="Momentum"
+            label="Trajectory Momentum"
             value={trend.momentum}
             color={trend.momentum === 'accelerating' ? '#34D399' : trend.momentum === 'decelerating' ? '#FB7185' : '#64748B'}
+          />
+          <Stat
+            label="Outlier Sensitivity"
+            value={trend.outlier_sensitivity || (trend.outlier_sensitive ? 'High' : 'Low')}
+            color={trend.outlier_sensitive ? '#FBBF24' : '#34D399'}
           />
         </div>
       </div>
 
       <div className="text-[11px] text-muted/80 leading-relaxed border-t border-white/10 pt-3">
-        Linear regression goodness of fit R² = {trend.r2 != null ? trend.r2.toFixed(3) : 'N/A'} based on chronological observation series.
+        Linear fit R² = {trend.r2 != null ? trend.r2.toFixed(3) : 'N/A'}. Ordinary slope: {trend.slope != null ? trend.slope.toFixed(2) : '0'}. Robust slope: {trend.robust_trend?.slope != null ? trend.robust_trend.slope.toFixed(2) : (trend.slope != null ? trend.slope.toFixed(2) : '0')}.
       </div>
     </div>
   )

@@ -84,6 +84,13 @@ def try_parse_date_series(series: pd.Series) -> pd.Series:
                 pass
 
     # Pre-check sample to avoid running full date parsing on non-date columns
+    # Guard: If sample is numeric text (without date separators like '-' or '/'), do not parse with format="mixed"
+    has_date_separators = sample.str.contains(r"[-/]", regex=True).mean() > 0.3
+    has_date_words = sample.str.contains(r"\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b", case=False, regex=True).mean() > 0.3
+
+    if not (has_date_separators or has_date_words):
+        return pd.Series(pd.NaT, index=series.index)
+
     try:
         sample_parsed = pd.to_datetime(sample, errors="coerce", format="mixed")
         if sample_parsed.notna().mean() < 0.2:

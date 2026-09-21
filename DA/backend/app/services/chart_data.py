@@ -33,6 +33,23 @@ def build_chart_series(
     if date_column is not None and date_column in df.columns:
         dates = coerce_date_column(df, date_column)
         frame = pd.DataFrame({"date": dates, "value": y})
+        
+        # Check for extreme year outliers outside dominant cluster
+        valid_dates = frame["date"].dropna()
+        excluded_count = 0
+        if len(valid_dates) >= 10:
+            years = valid_dates.dt.year
+            dominant_year = int(years.mode()[0])
+            year_counts = years.value_counts()
+            keep_mask = pd.Series(True, index=frame.index)
+            for idx, dt in frame["date"].items():
+                if pd.notna(dt):
+                    yr = dt.year
+                    if abs(yr - dominant_year) >= 5 and year_counts.get(yr, 0) <= 2:
+                        keep_mask[idx] = False
+                        excluded_count += 1
+            frame = frame[keep_mask]
+
         frame = frame.dropna(subset=["date", "value"]).sort_values("date")
         if limit:
             frame = frame.tail(limit)
@@ -50,6 +67,8 @@ def build_chart_series(
             "metric": metric,
             "x_label": date_column,
             "temporal_label": date_column,
+            "time_axis_type": "datetime",
+            "excluded_points_count": excluded_count,
         }
 
     # No date: observation order

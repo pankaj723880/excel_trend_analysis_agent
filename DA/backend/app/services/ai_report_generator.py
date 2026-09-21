@@ -19,14 +19,21 @@ def generate_full_ai_report(
     analysis: dict[str, Any],
     schema: dict[str, Any],
 ) -> dict[str, Any]:
-    """Generates a complete structured Executive Business Report."""
+    """Generates a complete structured Executive Business Report.
+
+    Strictly separates:
+    1. VERIFIED FACTS (deterministic figures from Pandas)
+    2. INTERPRETATIONS (contextual narratives explaining the facts)
+    3. EVIDENCE-BASED RECOMMENDATIONS (only when issues exist)
+    """
     context_info = detect_business_context(workbook_dict, schema)
     domain = context_info.get("domain", "General Analytics")
 
     trends = analysis.get("trends", {})
     anomalies = analysis.get("anomalies", {})
     profiles = analysis.get("profiles", {})
-    sheets = analysis.get("sheets", {})
+    quality = analysis.get("quality", {})
+    all_kpis = analysis.get("all_kpis", [])
     workbook_health = int(analysis.get("workbook_health", 85))
     total_rows = int(analysis.get("total_rows", 0))
 
@@ -41,46 +48,70 @@ def generate_full_ai_report(
     top_growth = [m for m in all_metrics if m.get("change_pct", 0) > 0][:5]
     pressure_metrics = [m for m in all_metrics if m.get("change_pct", 0) < 0][:5]
 
-    # Fact vs Explanation Split
+    # Fact vs Explanation Split (Pure Evidence vs Analytical Insight)
     facts_and_explanations = []
 
     if top_growth:
         fastest = top_growth[0]
         facts_and_explanations.append({
-            "fact": f"VERIFIED FACT: {fastest.get('metric')} ({fastest.get('sheet')}) grew by +{fastest.get('change_pct', 0):.1f}% over the evaluated period.",
-            "possible_explanation": f"POSSIBLE EXPLANATION: Sustained upward momentum (Trend Score: {fastest.get('trend_score', 0):.1f}) with strong overall transaction volume.",
+            "fact": f"VERIFIED FACT: {fastest.get('metric')} in sheet '{fastest.get('sheet')}' demonstrated a first-to-last change of +{fastest.get('change_pct', 0):.1f}%.",
+            "possible_explanation": (
+                f"INTERPRETATION: Upward trajectory (Trend Score: {fastest.get('trend_score', 0):.1f}, Confidence: {fastest.get('confidence', 'Medium')}) "
+                f"with {fastest.get('volatility_pct', 0):.1f}% relative volatility."
+            ),
         })
 
     if pressure_metrics:
         lowest = pressure_metrics[0]
         facts_and_explanations.append({
-            "fact": f"VERIFIED FACT: {lowest.get('metric')} ({lowest.get('sheet')}) declined by {lowest.get('change_pct', 0):.1f}%.",
-            "possible_explanation": f"POSSIBLE EXPLANATION: Metric experienced downside pressure and volatility ({lowest.get('volatility_pct', 0):.1f}% volatility).",
+            "fact": f"VERIFIED FACT: {lowest.get('metric')} in sheet '{lowest.get('sheet')}' declined by {lowest.get('change_pct', 0):.1f}%.",
+            "possible_explanation": (
+                f"INTERPRETATION: Downside movement identified (Trend Score: {lowest.get('trend_score', 0):.1f}) "
+                f"under {lowest.get('volatility_pct', 0):.1f}% volatility."
+            ),
         })
 
-    # Strategic recommendations
-    recommendations = [
-        f"1. Capitalize on growth momentum in top metrics ({', '.join(m.get('metric') for m in top_growth[:2]) or 'primary metrics'}).",
-        f"2. Investigate root causes behind underperforming metrics ({', '.join(m.get('metric') for m in pressure_metrics[:2]) or 'declining areas'}).",
-        f"3. Maintain dataset quality by addressing missing values and anomalies in the Cleaning Studio.",
-    ]
+    # Evidence-based strategic recommendations
+    recommendations: list[str] = []
+    total_missing = int(analysis.get("total_missing", 0))
+    total_duplicates = int(analysis.get("total_duplicates", 0))
+    total_anomalies = sum(int(sheet_anom.get("total", 0)) for sheet_anom in anomalies.values() if isinstance(sheet_anom, dict))
+
+    if total_missing > 0:
+        recommendations.append(f"Investigate {total_missing:,} missing data points across sheets using the Cleaning Studio.")
+    if total_duplicates > 0:
+        recommendations.append(f"Audit {total_duplicates:,} duplicate rows to ensure uniqueness in statistical summaries.")
+    if total_anomalies > 0:
+        recommendations.append(f"Review {total_anomalies:,} statistical outliers flagged by IQR and Z-score methods.")
+
+    # Growth & Volatility recommendations based strictly on available metrics
+    if top_growth:
+        top_names = ", ".join(m.get("metric") for m in top_growth[:2])
+        recommendations.append(f"Evaluate positive expansion drivers in {top_names}.")
+    if pressure_metrics:
+        declining_names = ", ".join(m.get("metric") for m in pressure_metrics[:2])
+        recommendations.append(f"Examine factors influencing contractions in {declining_names}.")
+
+    if not recommendations:
+        recommendations.append("Dataset maintains high consistency; continue periodic surveillance of key metrics.")
 
     report = {
-        "title": f"Executive Data Intelligence Report - {schema.get('filename', 'Workbook')}",
+        "title": f"Executive Intelligence Report - {schema.get('filename', 'Workbook')}",
         "domain": domain,
         "domain_confidence": context_info.get("confidence", "High"),
         "total_rows": total_rows,
         "sheet_count": len(workbook_dict),
         "health_score": workbook_health,
         "executive_summary": (
-            f"This Executive Business Report analyzes {total_rows:,} rows across {len(workbook_dict)} worksheet(s) "
-            f"in the '{domain}' domain. Overall dataset health is rated at {workbook_health}%."
+            f"This Executive Analysis evaluates {total_rows:,} records across {len(workbook_dict)} worksheet(s). "
+            f"Identified business context aligns with '{domain}'. Overall Data Quality Index is rated at {workbook_health}%."
         ),
         "top_growth_drivers": top_growth,
         "metrics_under_pressure": pressure_metrics,
         "facts_and_explanations": facts_and_explanations,
         "recommendations": recommendations,
         "all_metrics": all_metrics[:10],
+        "kpis": all_kpis[:10],
     }
 
     return report

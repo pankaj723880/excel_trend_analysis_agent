@@ -37,11 +37,18 @@ export default function Dashboard() {
     return overview.profile[selectedSheet] || null
   }, [overview, selectedSheet])
 
-  const sheetEda = useMemo(() => {
+  const sheetData = useMemo(() => {
     if (!edaData) return null
-    const entry = edaData[selectedSheet]
-    return entry?.status === 'ok' ? entry.eda : null
+    return edaData[selectedSheet] || null
   }, [edaData, selectedSheet])
+
+  const sheetEda = useMemo(() => {
+    return sheetData?.status === 'ok' ? sheetData.eda : null
+  }, [sheetData])
+
+  const sheetQuality = useMemo(() => {
+    return sheetData?.quality || null
+  }, [sheetData])
 
   const sheetTrends = useMemo(() => {
     if (!trendsData?.trends) return null
@@ -126,13 +133,19 @@ export default function Dashboard() {
         <WorkbookSelector />
       </div>
 
-      {/* KPI Cards Row */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3.5 sm:gap-4">
-        <KPICard label="Total Rows" value={formatNumber(calculatedTotalRows, 0)} sub="Total records" icon={Rows3} color="#60A5FA" />
-        <KPICard label="Total Columns" value={formatNumber(calculatedColumns, 0)} sub="Data fields" icon={Columns} color="#60A5FA" />
-        <KPICard label="Data Health" value={`${profile?.health_score ?? 85}%`} sub="Overall score" icon={Table2} color="#34D399" />
-        <KPICard label="Missing Values" value={formatNumber(summary.total_missing ?? 0, 0)} sub="Needs attention" icon={TriangleAlert} color="#FBBF24" />
-        <KPICard label="Duplicate Rows" value={formatNumber(summary.total_duplicates ?? 0, 0)} sub={summary.total_duplicates > 0 ? "Detected duplicates" : "Clean uniqueness"} icon={AlertOctagon} color="#FB7185" />
+      {/* KPI Cards Row - Workbook Totals vs Active Sheet Level */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-muted">Workbook Overview (All Sheets)</span>
+          <span className="text-[11px] text-primary/90 font-medium">Active Sheet: <strong className="text-white">{selectedSheet}</strong> ({profile?.rows || 0} rows, {calculatedColumns} cols)</span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3.5 sm:gap-4">
+          <KPICard label="Workbook Rows" value={formatNumber(calculatedTotalRows, 0)} sub={`${summary.sheet_count || sheets.length} total sheet(s)`} icon={Rows3} color="#60A5FA" />
+          <KPICard label="Active Sheet Cols" value={formatNumber(calculatedColumns, 0)} sub={`${selectedSheet} fields`} icon={Columns} color="#60A5FA" />
+          <KPICard label="Sheet Health" value={`${sheetQuality?.overall_score ?? profile?.health_score ?? 85}%`} sub={`${selectedSheet} integrity`} icon={Table2} color="#34D399" />
+          <KPICard label="Workbook Missing" value={formatNumber(summary.total_missing ?? 0, 0)} sub="Across all sheets" icon={TriangleAlert} color="#FBBF24" />
+          <KPICard label="Workbook Dups" value={formatNumber(summary.total_duplicates ?? 0, 0)} sub={summary.total_duplicates > 0 ? "Detected across sheets" : "Clean uniqueness"} icon={AlertOctagon} color="#FB7185" />
+        </div>
       </div>
 
       {/* Primary Analytics Grid: 2fr Chart + 1fr AI Insight */}

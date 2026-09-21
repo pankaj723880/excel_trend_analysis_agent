@@ -106,7 +106,16 @@ def clean_dataframe(
 
     strategy = (fill_missing or "none").lower()
     numeric_columns = cleaned.select_dtypes(include="number").columns
-    if strategy in ("forward", "ffill"):
+
+    if strategy == "recommend":
+        # Context-aware recommendation: median if skewed or has outliers, else mean
+        for column in numeric_columns:
+            s = cleaned[column].dropna()
+            if len(s) >= 4 and abs(s.skew()) > 1.0:
+                cleaned[column] = cleaned[column].fillna(s.median())
+            else:
+                cleaned[column] = cleaned[column].fillna(s.mean() if len(s) else 0)
+    elif strategy in ("forward", "ffill"):
         cleaned = cleaned.ffill()
     elif strategy in ("backward", "bfill"):
         cleaned = cleaned.bfill()
@@ -143,13 +152,21 @@ def clean_dataframe(
             cleaned.loc[(cleaned[column] < lower) | (cleaned[column] > upper), column] = med
 
     if clean_domain_anomalies:
-        # Fix domain rule violations (clip negative values for sales/qty/price, cap percentages between 0 and 100)
-        for column in numeric_columns:
-            col_name = str(column).lower()
-            if any(k in col_name for k in ("sales", "qty", "quantity", "revenue", "count", "price", "cost", "amount", "profit")):
-                cleaned[column] = cleaned[column].clip(lower=0)
-            if any(k in col_name for k in ("percent", "pct", "rate", "ratio", "%")):
-                cleaned[column] = cleaned[column].clip(lower=0, upper=100)
+        # Fix detected domain violations using DomainValidator (never clip profit or financial balances)
+        from app.services.validation import DomainValidator
+        val_audit = DomainValidator.validate_sheet(cleaned)
+        for v in val_audit.get("violations", []):
+            col = v.get("column")
+            row_idx = v.get("row_index")
+            rule = v.get("rule")
+            if col in cleaned.columns and row_idx in cleaned.index:
+                if rule in ("non_negative_count", "non_negative_price"):
+                    # Discrete counts and unit prices cannot be negative: set to NaN or 0 if count
+                    cleaned.loc[row_idx, col] = 0
+                elif rule == "percentage_range":
+                    # Cap percentage within valid [0, 100]
+                    val = float(cleaned.loc[row_idx, col])
+                    cleaned.loc[row_idx, col] = max(0.0, min(100.0, val))
 
     return cleaned.reset_index(drop=True)
 
@@ -181,18 +198,44 @@ def clean_workbook(workbook, options: dict) -> tuple[dict, pd.DataFrame]:
         before = df
         after = clean_dataframe(df, **options)
 
+        rows_before = len(before)
+        rows_after = len(after)
+        rows_dropped = max(0, rows_before - rows_after)
+        cols_before = len(before.columns)
+        cols_after = len(after.columns)
+        missing_before = int(before.isna().sum().sum())
+        missing_after = int(after.isna().sum().sum())
+        missing_filled = max(0, missing_before - missing_after)
+        duplicates_removed = int(max(0, before.duplicated().sum() - after.duplicated().sum()))
+        cells_changed = int(_count_cell_changes(before, after))
+
         cleaned_workbook[sheet_name] = after
         report.append(
             {
                 "Sheet": sheet_name,
-                "Rows before": len(before),
-                "Rows after": len(after),
-                "Columns before": len(before.columns),
-                "Columns after": len(after.columns),
-                "Missing before": int(before.isna().sum().sum()),
-                "Missing after": int(after.isna().sum().sum()),
-                "Duplicates removed": int(max(0, before.duplicated().sum() - after.duplicated().sum())),
-                "Cells changed": int(_count_cell_changes(before, after)),
+                "sheet": sheet_name,
+                "Rows before": rows_before,
+                "Rows after": rows_after,
+                "rows_before": rows_before,
+                "rows_after": rows_after,
+                "rows_dropped": rows_dropped,
+                "input_rows": rows_before,
+                "output_rows": rows_after,
+                "Columns before": cols_before,
+                "Columns after": cols_after,
+                "columns_before": cols_before,
+                "columns_after": cols_after,
+                "columns_renamed": int(sum(1 for a, b in zip(before.columns, after.columns) if str(a) != str(b))),
+                "Missing before": missing_before,
+                "Missing after": missing_after,
+                "missing_before": missing_before,
+                "missing_after": missing_after,
+                "missing_filled": missing_filled,
+                "missing_values_filled": missing_filled,
+                "Duplicates removed": duplicates_removed,
+                "duplicates_removed": duplicates_removed,
+                "Cells changed": cells_changed,
+                "cells_changed": cells_changed,
                 "Error": None,
             }
         )

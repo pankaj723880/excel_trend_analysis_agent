@@ -288,12 +288,10 @@ def fallback_parse_intent(question: str, schema: dict[str, Any]) -> dict[str, An
         operation = "summary"
 
     target_cat = None
-    if "product a" in q:
-        target_cat = "Product A"
-    elif "product b" in q:
-        target_cat = "Product B"
-    elif "product c" in q:
-        target_cat = "Product C"
+    # Dynamic categorical extraction: look for quoted target value or category mentions
+    quote_match = re.search(r"['\"]([^'\"]+)['\"]", q)
+    if quote_match:
+        target_cat = quote_match.group(1)
 
     return {
         "intent": intent,

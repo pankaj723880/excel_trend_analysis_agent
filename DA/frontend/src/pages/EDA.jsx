@@ -63,9 +63,15 @@ export default function EDA() {
             </h3>
           </div>
           {sheetEda ? (
-            <EDAStatistics statistics={sheetEda.numeric_statistics} />
+            <EDAStatistics
+              statistics={sheetEda.numeric_statistics}
+              categoricalStatistics={sheetEda.categorical_statistics}
+              datetimeStatistics={sheetEda.datetime_statistics}
+              booleanStatistics={sheetEda.boolean_statistics}
+              textStatistics={sheetEda.text_statistics}
+            />
           ) : !sheetError ? (
-            <div className="text-xs text-muted py-12 text-center">No numeric statistics available for this sheet.</div>
+            <div className="text-xs text-muted py-12 text-center">No statistics available for this sheet.</div>
           ) : null}
         </div>
 
@@ -98,17 +104,26 @@ export default function EDA() {
                   <tr>
                     <th className="sticky top-0 bg-[#0C1220] text-secondary">Column</th>
                     <th className="sticky top-0 bg-[#0C1220] text-secondary">Inferred Type</th>
+                    <th className="sticky top-0 bg-[#0C1220] text-secondary">Semantic Role</th>
+                    <th className="sticky top-0 bg-[#0C1220] text-secondary">Confidence</th>
                     <th className="sticky top-0 bg-[#0C1220] text-secondary">Unique Count</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {Object.entries(profile.data_types).map(([column, type]) => (
-                    <tr key={column} className="hover:bg-white/[0.04]">
-                      <td className="font-semibold text-white">{column}</td>
-                      <td className="text-secondary font-mono text-xs">{type}</td>
-                      <td className="text-primary font-medium">{formatNumber(profile.unique_counts?.[column] ?? 0, 0)}</td>
-                    </tr>
-                  ))}
+                  {Object.entries(profile.data_types).map(([column, type]) => {
+                    const schemaMeta = profile.columns_schema?.[column]
+                    const semantic = schemaMeta?.semantic_type || type
+                    const confidence = schemaMeta?.confidence ? `${Math.round(schemaMeta.confidence * 100)}%` : '95%'
+                    return (
+                      <tr key={column} className="hover:bg-white/[0.04]">
+                        <td className="font-semibold text-white">{column}</td>
+                        <td className="text-secondary font-mono text-xs">{type}</td>
+                        <td className="text-primary font-medium capitalize">{semantic}</td>
+                        <td className="text-emerald-400 font-mono text-xs">{confidence}</td>
+                        <td className="text-white font-medium">{formatNumber(profile.unique_counts?.[column] ?? 0, 0)}</td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

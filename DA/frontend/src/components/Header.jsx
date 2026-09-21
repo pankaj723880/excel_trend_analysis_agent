@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Check, Moon, Settings, Sun, UploadCloud, X, ChevronRight, Sparkles, FileSpreadsheet, RefreshCw } from 'lucide-react'
+import { Check, Moon, Settings, Sun, UploadCloud, X, ChevronRight, Sparkles, FileSpreadsheet, RefreshCw, PanelLeft } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
 import { useWorkbook } from '../context/WorkbookContext'
@@ -25,7 +25,7 @@ const ROUTE_LABELS = {
 }
 
 export default function Header() {
-  const { filename, overview, handleUpload, refreshWorkbook } = useWorkbook()
+  const { filename, overview, handleUpload, refreshWorkbook, toggleSidebar, sidebarCollapsed } = useWorkbook()
   const { themeMode, setThemeMode } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
@@ -98,8 +98,15 @@ export default function Header() {
         onChange={onDirectUpload}
       />
 
-      {/* Left: Breadcrumbs & Page Context */}
+      {/* Left: Breadcrumbs, Sidebar Toggle & Page Context */}
       <div className="flex items-center gap-2.5 min-w-0">
+        <button
+          onClick={toggleSidebar}
+          className="md:hidden h-8 w-8 rounded-lg border border-white/[0.08] hover:border-white/[0.2] bg-white/[0.02] hover:bg-white/[0.05] flex items-center justify-center text-muted hover:text-ink transition-colors cursor-pointer shrink-0"
+          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          <PanelLeft size={16} />
+        </button>
         <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted font-medium">
           <span className="hover:text-ink cursor-pointer transition-colors" onClick={() => navigate('/')}>
             Intelligence

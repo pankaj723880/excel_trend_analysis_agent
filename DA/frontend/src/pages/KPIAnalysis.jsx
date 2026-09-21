@@ -132,7 +132,7 @@ export default function KPIAnalysis() {
                       </span>
                     </div>
                     <div>
-                      <span className="text-muted block text-[11px]">Trend Score</span>
+                      <span className="text-muted block text-[11px]">Trend Strength</span>
                       <span
                         className={`font-bold font-mono text-sm ${
                           isPositiveTrend ? 'text-positive' : isNegativeTrend ? 'text-negative' : 'text-secondary'
@@ -148,7 +148,7 @@ export default function KPIAnalysis() {
                       </span>
                     </div>
                     <div>
-                      <span className="text-muted block text-[11px]">Confidence</span>
+                      <span className="text-muted block text-[11px]">Statistical Confidence</span>
                       <span className="font-bold text-secondary font-mono">{kpi.confidence}</span>
                     </div>
                   </div>

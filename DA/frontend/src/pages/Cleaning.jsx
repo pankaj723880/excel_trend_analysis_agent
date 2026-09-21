@@ -247,8 +247,8 @@ export default function Cleaning() {
                   className="rounded border-glass-border bg-transparent text-primary focus:ring-primary h-4 w-4 mt-0.5 cursor-pointer"
                 />
                 <div>
-                  <span className="text-xs font-semibold text-white block">Fix Domain Anomalies</span>
-                  <span className="text-[11px] text-muted leading-tight block">Clip negative prices/quantities & cap rates between 0-100%</span>
+                  <span className="text-xs font-semibold text-white block">Fix Detected Domain Violations</span>
+                  <span className="text-[11px] text-muted leading-tight block">Zero out invalid negative counts & cap bounded percentages (protects financial profit & margins)</span>
                 </div>
               </label>
 
@@ -256,12 +256,13 @@ export default function Cleaning() {
               <div className="p-3 rounded-lg border border-glass-border bg-white/[0.02] space-y-1.5">
                 <label className="block text-xs font-semibold text-secondary">Handle Missing Values Strategy</label>
                 <select
-                  className="w-full bg-[#070B14] border border-glass-border rounded-lg text-xs text-white px-2.5 py-1.5 focus:outline-none focus:border-primary"
+                  className="w-full bg-[#070B14] border border-glass-border rounded-lg text-xs text-white px-2.5 py-1.5 focus:outline-none focus:border-primary cursor-pointer"
                   value={options.fill_missing}
                   onChange={(e) => setOptions({ ...options, fill_missing: e.target.value })}
                 >
-                  <option value="mean">Fill with Column Mean</option>
+                  <option value="recommend">Auto-Recommended (Median for skewed series, Mean for normal)</option>
                   <option value="median">Fill with Column Median</option>
+                  <option value="mean">Fill with Column Mean</option>
                   <option value="mode">Fill with Column Mode</option>
                   <option value="zero">Fill with Constant Zero (0)</option>
                   <option value="forward">Forward Fill (ffill)</option>

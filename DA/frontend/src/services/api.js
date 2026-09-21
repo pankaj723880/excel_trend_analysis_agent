@@ -30,6 +30,17 @@ export async function listWorkbooks() {
   return data
 }
 
+export async function getWorkspaceHistory(workbookId = null) {
+  const params = workbookId ? { workbook_id: workbookId } : {}
+  const { data } = await client.get('/workbooks/history/all', { params })
+  return data
+}
+
+export async function deleteWorkbookApi(workbookId) {
+  const { data } = await client.delete(`/workbooks/${workbookId}`)
+  return data
+}
+
 export async function getWorkbookOverview(workbookId) {
   const { data } = await client.get(`/workbook/${workbookId}`)
   return data

@@ -65,12 +65,33 @@ export default function Anomalies() {
 
       {/* Severity Summary KPI Row */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-        <SeverityMini label="TOTAL DETECTED" count={sheetAnomalies.total} color="#60A5FA" />
+        <SeverityMini label="UNIQUE OUTLIERS" count={sheetAnomalies.unique_anomalous_observations ?? sheetAnomalies.total} color="#60A5FA" />
         <SeverityMini label="CRITICAL" count={severityCounts.Critical} color="#FB7185" />
         <SeverityMini label="HIGH" count={severityCounts.High} color="#F97316" />
         <SeverityMini label="MEDIUM" count={severityCounts.Medium} color="#FBBF24" />
         <SeverityMini label="LOW" count={severityCounts.Low} color="#A78BFA" />
       </div>
+
+      {/* Detection Methods Breakdown */}
+      {sheetAnomalies.method_counts && (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-muted font-medium">Detection Method Breakdown:</span>
+          <span className="px-2.5 py-1 rounded-md bg-white/[0.04] border border-white/10 text-secondary">
+            IQR Outliers: <strong className="text-white font-mono">{sheetAnomalies.method_counts.iqr_outliers ?? 0}</strong>
+          </span>
+          <span className="px-2.5 py-1 rounded-md bg-white/[0.04] border border-white/10 text-secondary">
+            Z-Score: <strong className="text-white font-mono">{sheetAnomalies.method_counts.zscore_outliers ?? 0}</strong>
+          </span>
+          <span className="px-2.5 py-1 rounded-md bg-white/[0.04] border border-white/10 text-secondary">
+            Sudden Changes: <strong className="text-white font-mono">{sheetAnomalies.method_counts.sudden_changes ?? 0}</strong>
+          </span>
+          {sheetAnomalies.method_counts.domain_violations > 0 && (
+            <span className="px-2.5 py-1 rounded-md bg-rose-500/10 border border-rose-500/30 text-rose-400">
+              Domain Violations: <strong className="font-mono">{sheetAnomalies.method_counts.domain_violations}</strong>
+            </span>
+          )}
+        </div>
+      )}
 
       {/* AI Explanation Banner */}
       <div className="glass-card-ai p-4 flex items-start gap-3">

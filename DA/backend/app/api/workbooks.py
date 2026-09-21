@@ -12,7 +12,7 @@ from app.models.schemas import CleanRequest, AskRequest
 from app.services.analysis_engine import analyze_workbook_summary, run_full_analysis
 from app.services.excel_loader import load_workbook_data
 from app.services.profiler import profile_workbook
-from app.services.store import store_workbook, get_workbook, clear_workbook
+from app.services.store import store_workbook, get_workbook, clear_workbook, list_stored_workbooks
 from app.services.mongo_store import (
     load_all_workbooks_from_mongo,
     delete_workbook_from_mongo,
@@ -21,6 +21,8 @@ from app.services.mongo_store import (
     save_ai_insights_to_mongo,
     save_report_to_mongo,
     load_reports_from_mongo,
+    load_all_reports_from_mongo,
+    load_cleaning_operations_from_mongo,
 )
 from app.services.verified_data_agent import ask_verified_agent
 from app.services.ai_report_generator import generate_full_ai_report
@@ -94,9 +96,138 @@ async def upload_workbook_endpoint(file: UploadFile = File(...)):
 
 @router.get("")
 async def list_workbooks():
-    """Returns list of all persisted workbooks belonging to the active user."""
-    workbooks = load_all_workbooks_from_mongo()
-    return {"workbooks": workbooks, "count": len(workbooks)}
+    """Returns list of all workbooks: merges MongoDB records and in-memory store seamlessly."""
+    mongo_wbs = load_all_workbooks_from_mongo()
+    mem_wbs = list_stored_workbooks()
+
+    # Merge by workbook_id, preferring mongo if present or mem if fresher
+    seen_ids = set()
+    combined = []
+
+    for wb in mongo_wbs:
+        wid = wb.get("workbook_id")
+        if wid:
+            seen_ids.add(wid)
+            combined.append(wb)
+
+    for wb in mem_wbs:
+        wid = wb.get("workbook_id")
+        if wid and wid not in seen_ids:
+            seen_ids.add(wid)
+            combined.append(wb)
+
+    combined.sort(key=lambda x: x.get("created_at") or 0, reverse=True)
+    return {"workbooks": combined, "count": len(combined)}
+
+
+@router.get("/history/all")
+async def get_workspace_history(workbook_id: Optional[str] = None):
+    """Returns unified chronologically-ordered events across workbooks, queries, reports, and cleaning passes."""
+    mongo_wbs = load_all_workbooks_from_mongo()
+    mem_wbs = list_stored_workbooks()
+
+    seen_ids = set()
+    workbooks = []
+    for wb in mongo_wbs:
+        wid = wb.get("workbook_id")
+        if wid:
+            seen_ids.add(wid)
+            workbooks.append(wb)
+    for wb in mem_wbs:
+        wid = wb.get("workbook_id")
+        if wid and wid not in seen_ids:
+            seen_ids.add(wid)
+            workbooks.append(wb)
+
+    items = []
+
+    # 1. Workbook Uploads & Analysis Runs
+    for wb in workbooks:
+        wid = wb.get("workbook_id")
+        if workbook_id and wid != workbook_id:
+            continue
+        fname = wb.get("filename", "workbook.xlsx")
+        sheet_count = wb.get("sheet_count", 1)
+        total_rows = wb.get("total_rows", 0)
+        health = wb.get("data_health_score", 90)
+        created_at = wb.get("created_at") or wb.get("upload_timestamp") or 0
+
+        items.append({
+            "id": f"wb_{wid}",
+            "workbook_id": wid,
+            "filename": fname,
+            "type": "workbook",
+            "title": f"Workbook Audited: {fname}",
+            "timestamp": created_at,
+            "details": f"Analyzed {sheet_count} sheet(s) with {total_rows:,} rows. Health score: {health}%. Full EDA, anomalies & trends calculated.",
+            "badge": "Analysis Run",
+            "badgeColor": "text-primary bg-primary/10 border-primary/20",
+        })
+
+    # 2. Conversational Queries
+    target_wids = [workbook_id] if workbook_id else list(seen_ids)
+    for wid in target_wids:
+        convs = load_conversations_from_mongo(wid)
+        for c_idx, conv in enumerate(convs):
+            q = conv.get("question", "")
+            ans = conv.get("AI_answer", "")
+            calc = conv.get("calculation_result") or {}
+            op = calc.get("operation") or "calculation"
+            sheet = conv.get("source_sheet") or calc.get("source_sheet") or "sheet"
+            c_time = conv.get("created_at") or 0
+
+            snippet = ans[:160] + ("..." if len(ans) > 160 else "") if ans else "Grounded Pandas computation verified."
+            items.append({
+                "id": f"conv_{wid}_{c_idx}_{conv.get('_id', c_idx)}",
+                "workbook_id": wid,
+                "type": "query",
+                "title": f"Question: \"{q}\"",
+                "timestamp": c_time,
+                "details": f"[{op.upper()} on {sheet}] {snippet}",
+                "badge": "Ask Your Data",
+                "badgeColor": "text-ai bg-ai/10 border-ai/20",
+            })
+
+    # 3. Generated Reports
+    for wid in target_wids:
+        reports = load_reports_from_mongo(wid)
+        for r_idx, rep in enumerate(reports):
+            title = rep.get("title") or "Executive Intelligence & Performance Audit"
+            summary = rep.get("summary") or "Synthesized management brief covering momentum, completeness, and recommended actions."
+            r_time = rep.get("generated_at") or 0
+            items.append({
+                "id": f"rep_{wid}_{r_idx}_{rep.get('_id', r_idx)}",
+                "workbook_id": wid,
+                "type": "report",
+                "title": title,
+                "timestamp": r_time,
+                "details": summary[:180] + ("..." if len(summary) > 180 else ""),
+                "badge": "Report Generated",
+                "badgeColor": "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+            })
+
+    # 4. Cleaning Passes
+    cleanings = load_cleaning_operations_from_mongo(workbook_id)
+    for cl_idx, cl in enumerate(cleanings):
+        wid = cl.get("workbook_id")
+        op = cl.get("operation", "data_cleaning")
+        aff = cl.get("affected_rows", 0)
+        c_time = cl.get("created_at") or 0
+        items.append({
+            "id": f"cl_{wid}_{cl_idx}_{cl.get('_id', cl_idx)}",
+            "workbook_id": wid,
+            "type": "cleaning",
+            "title": f"Cleaning Pass: {op.replace('_', ' ').capitalize()}",
+            "timestamp": c_time,
+            "details": f"Processed dataset transformations safely; {aff} cell/row modification(s) applied to copy.",
+            "badge": "Cleaning Pass",
+            "badgeColor": "text-amber-400 bg-amber-500/10 border-amber-500/20",
+        })
+
+    # Sort all items newest first
+    items.sort(key=lambda x: x.get("timestamp") or 0, reverse=True)
+    return {"items": items, "count": len(items)}
+
 
 
 @router.get("/{workbook_id}")

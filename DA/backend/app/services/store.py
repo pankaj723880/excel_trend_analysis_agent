@@ -21,10 +21,20 @@ def store_workbook(
     analysis: dict | None = None,
 ) -> None:
     with _LOCK:
+        file_size = 0
+        if path:
+            try:
+                import os
+                if os.path.exists(path):
+                    file_size = os.path.getsize(path)
+            except Exception:
+                pass
+
         _STORE[workbook_id] = {
             "id": workbook_id,
             "path": path,
             "filename": filename,
+            "file_size": file_size,
             "workbook": workbook_dict,
             "profile": profile,
             "analysis": analysis or {},
@@ -209,4 +219,36 @@ def clear() -> None:
 def stats() -> dict:
     with _LOCK:
         return {"count": len(_STORE), "ids": list(_STORE.keys())}
+
+
+def list_stored_workbooks() -> list[dict]:
+    """Returns metadata list of all workbooks currently in memory."""
+    with _LOCK:
+        results = []
+        for wid, entry in _STORE.items():
+            wb_dict = entry.get("cleaned_copy") or entry.get("workbook") or {}
+            profile = entry.get("profile") or {}
+            analysis = entry.get("analysis") or {}
+            
+            # Compute summary stats
+            sheet_count = len(wb_dict)
+            total_rows = sum(len(df) for df in wb_dict.values())
+            total_cols = sum(len(df.columns) for df in wb_dict.values())
+            health_score = analysis.get("workbook_health") or profile.get("health_score", 85)
+            
+            results.append({
+                "workbook_id": wid,
+                "filename": entry.get("filename", "workbook.xlsx"),
+                "file_size": entry.get("file_size", 0),
+                "created_at": entry.get("created_at", time.time()),
+                "sheet_count": sheet_count,
+                "total_rows": total_rows,
+                "total_columns": total_cols,
+                "data_health_score": health_score,
+                "status": "active",
+            })
+        # Sort by created_at descending
+        results.sort(key=lambda x: x.get("created_at", 0), reverse=True)
+        return results
+
 

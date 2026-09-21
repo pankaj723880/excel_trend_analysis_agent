@@ -218,7 +218,9 @@ def save_analysis_to_mongo(workbook_id: str, analysis: dict[str, Any]) -> None:
     sanitized_analysis = _sanitize_for_mongo(analysis)
     doc = {
         "workbook_id": workbook_id,
-        "analysis_version": "1.0",
+        "analysis_version": analysis.get("analysis_version", "2.1"),
+        "engine_version": analysis.get("engine_version", "2.1.0"),
+        "schema_version": analysis.get("schema_version", "2.0"),
         "created_at": time.time(),
         "analysis": sanitized_analysis,
     }
@@ -301,14 +303,24 @@ def load_workbook_from_mongo(workbook_id: str) -> dict[str, Any] | None:
         logger.warning(f"No sheet data rows found for workbook {workbook_id}.")
         return None
 
-    # Load stored analysis or compute if missing
+    # Load stored analysis or compute if missing/outdated
     analysis_doc = get_analysis_results_collection().find_one({"workbook_id": workbook_id})
     analysis = analysis_doc.get("analysis", {}) if (analysis_doc and isinstance(analysis_doc.get("analysis"), dict)) else {}
 
-    if not analysis or "sheets" not in analysis or not analysis.get("sheets"):
+    # If analysis version is outdated (< 2.3.0) or missing key structures, re-run canonical analysis
+    version = str(analysis.get("analysis_version", ""))
+    needs_refresh = (
+        not analysis
+        or "sheets" not in analysis
+        or not analysis.get("sheets")
+        or version < "2.3.0"
+    )
+
+    if needs_refresh:
         try:
             from app.services.analysis_engine import run_full_analysis
             analysis = run_full_analysis(workbook_dict)
+            save_analysis_to_mongo(workbook_id, analysis)
         except Exception as a_err:
             logger.warning(f"Could not re-run analysis for {workbook_id}: {a_err}")
             analysis = {}
@@ -477,6 +489,33 @@ def load_reports_from_mongo(workbook_id: str) -> list[dict[str, Any]]:
     return results
 
 
+def load_all_reports_from_mongo(user_id: str = DEFAULT_USER_ID) -> list[dict[str, Any]]:
+    """Retrieves all generated reports across all workbooks for a user."""
+    if not validate_mongo_connection():
+        return []
+
+    cursor = get_reports_collection().find({"user_id": user_id}).sort("generated_at", -1)
+    results = []
+    for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        results.append(doc)
+    return results
+
+
+def load_cleaning_operations_from_mongo(workbook_id: str | None = None) -> list[dict[str, Any]]:
+    """Retrieves cleaning operations for a specific workbook or across all workbooks."""
+    if not validate_mongo_connection():
+        return []
+
+    query = {"workbook_id": workbook_id} if workbook_id else {}
+    cursor = get_cleaning_operations_collection().find(query).sort("created_at", -1)
+    results = []
+    for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        results.append(doc)
+    return results
+
+
 def load_all_workbooks_from_mongo(user_id: str = DEFAULT_USER_ID) -> list[dict[str, Any]]:
     """Lists all workbooks belonging to a specific user."""
     if not validate_mongo_connection():
@@ -488,3 +527,4 @@ def load_all_workbooks_from_mongo(user_id: str = DEFAULT_USER_ID) -> list[dict[s
         doc["_id"] = str(doc["_id"])
         results.append(doc)
     return results
+

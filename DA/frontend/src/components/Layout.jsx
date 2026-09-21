@@ -19,7 +19,7 @@ export default function Layout() {
       <Sidebar />
       <div 
         className={`flex-1 min-w-0 max-w-full min-h-screen flex flex-col transition-all duration-300 ease-in-out relative z-10 ${
-          sidebarCollapsed ? 'md:pl-20' : 'md:pl-64'
+          sidebarCollapsed ? 'pl-20' : 'pl-64'
         }`}
       >
         <Header />

@@ -12,8 +12,12 @@ function corrColor(value) {
   return `rgba(239, 68, 68, ${Math.max(0.08, Math.abs(v) * 0.45)})`
 }
 
-export default function CorrelationHeatmap({ matrix, columns }) {
-  if (!columns || columns.length < 2 || !Object.keys(matrix || {}).length) {
+export default function CorrelationHeatmap({ matrix, columns, reason }) {
+  const resolvedCols = (columns && columns.length > 0)
+    ? columns
+    : (matrix && typeof matrix === 'object' ? Object.keys(matrix) : [])
+
+  if (!resolvedCols || resolvedCols.length < 2 || !matrix || !Object.keys(matrix).length) {
     return (
       <div className="py-16 px-6 text-center flex flex-col items-center justify-center space-y-4 max-w-md mx-auto">
         <div className="h-12 w-12 rounded-xl bg-bg-sidebar border border-borderline flex items-center justify-center text-muted">
@@ -22,21 +26,21 @@ export default function CorrelationHeatmap({ matrix, columns }) {
         <div className="space-y-1.5">
           <h4 className="text-base font-bold text-ink">No correlation matrix available</h4>
           <p className="text-[12.5px] text-muted leading-relaxed">
-            This workbook does not contain enough numeric variables to calculate meaningful correlations.
+            {reason || 'This worksheet does not contain at least two usable numeric variables with non-zero variance.'}
           </p>
         </div>
       </div>
     )
   }
 
-  const cellSize = Math.max(52, Math.min(84, Math.floor(760 / columns.length)))
+  const cellSize = Math.max(52, Math.min(84, Math.floor(760 / resolvedCols.length)))
 
   return (
     <div className="overflow-x-auto">
-      <div className="p-2" style={{ minWidth: `${columns.length * cellSize + 90}px` }}>
+      <div className="p-2" style={{ minWidth: `${resolvedCols.length * cellSize + 90}px` }}>
         {/* Header row */}
         <div className="flex" style={{ paddingLeft: 90 }}>
-          {columns.map((column) => (
+          {resolvedCols.map((column) => (
             <div
               key={column}
               className="text-[10.5px] text-muted font-medium truncate text-center px-1"
@@ -49,7 +53,7 @@ export default function CorrelationHeatmap({ matrix, columns }) {
         </div>
 
         {/* Rows */}
-        {columns.map((rowColumn, rowIndex) => (
+        {resolvedCols.map((rowColumn, rowIndex) => (
           <div key={rowColumn} className="flex items-center mb-0.5">
             <div
               className="text-[10.5px] text-muted font-medium truncate text-right pr-2"
@@ -58,7 +62,7 @@ export default function CorrelationHeatmap({ matrix, columns }) {
             >
               {rowColumn.length > 20 ? `${rowColumn.slice(0, 19)}…` : rowColumn}
             </div>
-            {columns.map((column, colIndex) => {
+            {resolvedCols.map((column, colIndex) => {
               const value = matrix[rowColumn]?.[column]
               const isDiagonal = rowIndex === colIndex
               return (

@@ -9,7 +9,9 @@ export default function Correlations() {
   const sheetCorrelations = useMemo(() => {
     if (!correlationsData) return null
     const entry = correlationsData[selectedSheet]
-    return entry?.status === 'ok' ? entry.correlations : null
+    if (!entry) return null
+    // Support both direct {matrix, columns} object and nested {correlations: {matrix, columns}}
+    return entry.matrix !== undefined ? entry : (entry.correlations || null)
   }, [correlationsData, selectedSheet])
 
   if (!workbookId) {
@@ -56,7 +58,11 @@ export default function Correlations() {
           <span className="text-xs text-muted">Hover cells for exact coefficient</span>
         </div>
 
-        <CorrelationHeatmap matrix={sheetCorrelations} />
+        <CorrelationHeatmap
+          matrix={sheetCorrelations?.matrix}
+          columns={sheetCorrelations?.columns}
+          reason={sheetCorrelations?.note || sheetCorrelations?.error}
+        />
       </div>
     </div>
   )

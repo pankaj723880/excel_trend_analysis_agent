@@ -8,47 +8,11 @@ from app.utils.dates import detect_date_column, try_parse_date_series
 from app.utils.numbers import parse_numeric_text
 
 
-def _count_invalid_values(df: pd.DataFrame) -> dict:
-    """Count values flagged as invalid per column.
-
-    Invalid = values that are clearly malformed for the column type:
-    - numeric columns with NaN-only strings, percentages > 100 or < 0 for
-      columns whose name implies percentage, negative values where impossible.
-    """
-    invalid = {}
-    for column in df.columns:
-        series = df[column]
-        non_null = series.dropna()
-        if non_null.empty:
-            continue
-        count = 0
-
-        if pd.api.types.is_numeric_dtype(series):
-            lower = str(column).lower()
-            # Percent columns must be within 0..100 (or 0..1 heuristic avoided:
-            # we treat the column label as authoritative)
-            if any(token in lower for token in ("%", "percent", "rate", "ratio")):
-                count += int((non_null < 0).sum() | (non_null > 100).sum())
-            # Impossible negative values for count-like columns
-            if any(token in lower for token in ("count", "quantity", "qty", "units", "sales", "revenue", "profit")):
-                # Negative revenue/sales/counts are usually invalid, but leave
-                # profit out of that rule. Sales/revenue/count flagged only.
-                if any(token in lower for token in ("count", "quantity", "qty", "units", "sales", "revenue")):
-                    count += int((non_null < 0).sum())
-            invalid[column] = int(count)
-            continue
-
-        # Text columns: count values that look like numbers-with-garbage
-        numeric_candidate = parse_numeric_text(non_null)
-        parsed_mask = numeric_candidate.notna()
-        if parsed_mask.mean() >= 0.5 and parsed_mask.mean() < 0.95:
-            # Some values parse, some don't - the unparseable ones are invalid
-            invalid[column] = int((~parsed_mask).sum())
-        else:
-            # Empty strings treated as missing are handled separately
-            invalid[column] = 0
-
-    return {col: v for col, v in invalid.items() if v > 0}
+def _count_invalid_values(df: pd.DataFrame, date_column: str | None = None) -> dict:
+    """Count values flagged as invalid per column using the canonical DomainValidator."""
+    from app.services.validation import DomainValidator
+    val_res = DomainValidator.validate_sheet(df, date_column=date_column)
+    return {col: count for col, count in val_res.get("by_column", {}).items() if count > 0}
 
 
 def profile_sheet(df: pd.DataFrame, sheet_name: str | None = None) -> dict:
@@ -74,8 +38,16 @@ def profile_sheet(df: pd.DataFrame, sheet_name: str | None = None) -> dict:
         str(column): int(count) for column, count in df.isna().sum().items() if count > 0
     }
 
-    # Data types per column
-    data_types = {str(column): str(dtype) for column, dtype in df.dtypes.items()}
+    # Data types and inferred semantic schema per column
+    columns_schema = classification.get("columns_schema", {})
+    data_types = {}
+    for column in df.columns:
+        col_str = str(column)
+        schema_info = columns_schema.get(col_str)
+        if schema_info:
+            data_types[col_str] = schema_info.get("inferred_type", str(df[column].dtype))
+        else:
+            data_types[col_str] = str(df[column].dtype)
 
     # Empty-string-as-missing counts
     empty_strings = {}
@@ -93,17 +65,12 @@ def profile_sheet(df: pd.DataFrame, sheet_name: str | None = None) -> dict:
         if failed > 0:
             date_issues[str(date_col)] = failed
 
-    invalid_values = _count_invalid_values(df)
+    invalid_values = _count_invalid_values(df, date_column=date_col)
 
-    # Health score (0-100) from actual quality signals
-    health_score = compute_health_score(
-        missing_pct=missing_pct,
-        duplicate_ratio=(duplicate_rows / len(df)) * 100 if len(df) else 0.0,
-        invalid_count=sum(invalid_values.values()),
-        date_issue_count=sum(date_issues.values()),
-        total_cells=total_cells,
-        outlier_penalty=0.0,
-    )
+    # Canonical Health score from DataQualityEngine (guarantee 100% cross-page consistency)
+    from app.services.data_quality import DataQualityEngine
+    quality_audit = DataQualityEngine.audit_quality(df, date_column=date_col)
+    health_score = quality_audit.get("overall_score", 100)
 
     return {
         "sheet_name": sheet_name,
@@ -123,6 +90,7 @@ def profile_sheet(df: pd.DataFrame, sheet_name: str | None = None) -> dict:
         "empty_strings": empty_strings,
         "unique_counts": unique_counts,
         "data_types": data_types,
+        "columns_schema": columns_schema,
         "invalid_values": invalid_values,
         "date_issues": date_issues,
         "health_score": health_score,

@@ -71,6 +71,21 @@ export default function Trends() {
             </div>
           </div>
 
+          {/* Temporal Exclusions Banner if present */}
+          {activeTrend?.excluded_temporal_observations > 0 && (
+            <div className="glass-panel p-3.5 border-amber-500/30 bg-amber-500/10 flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 text-amber-300">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>
+                  <strong>{activeTrend.excluded_temporal_observations} observation(s)</strong> excluded from temporal trend calculation due to missing or out-of-range dates (e.g. solitary projection dates far outside dominant timeline).
+                </span>
+              </div>
+              <span className="font-mono text-[11px] text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20 whitespace-nowrap">
+                {activeTrend.valid_temporal_observations} / {activeTrend.total_observations} points used
+              </span>
+            </div>
+          )}
+
           {/* AI Explanation Callout */}
           <div className="glass-card-ai p-4 flex items-start gap-3">
             <Sparkles className="w-5 h-5 text-ai shrink-0 mt-0.5" />
@@ -95,13 +110,13 @@ export default function Trends() {
                 <thead>
                   <tr>
                     <th className="sticky top-0 bg-[#0C1220] text-secondary">Metric</th>
-                    <th className="sticky top-0 bg-[#0C1220] text-secondary">Direction</th>
-                    <th className="sticky top-0 bg-[#0C1220] text-secondary">Score</th>
-                    <th className="sticky top-0 bg-[#0C1220] text-secondary">Change %</th>
-                    <th className="sticky top-0 bg-[#0C1220] text-secondary">Volatility</th>
-                    <th className="sticky top-0 bg-[#0C1220] text-secondary">Confidence</th>
-                    <th className="sticky top-0 bg-[#0C1220] text-secondary">Momentum</th>
-                    <th className="sticky top-0 bg-[#0C1220] text-secondary">R²</th>
+                    <th className="sticky top-0 bg-[#0C1220] text-secondary">Direction & Trajectory</th>
+                    <th className="sticky top-0 bg-[#0C1220] text-secondary">Trend Strength</th>
+                    <th className="sticky top-0 bg-[#0C1220] text-secondary">Observed Change</th>
+                    <th className="sticky top-0 bg-[#0C1220] text-secondary">Volatility (CV)</th>
+                    <th className="sticky top-0 bg-[#0C1220] text-secondary">Statistical Confidence</th>
+                    <th className="sticky top-0 bg-[#0C1220] text-secondary">Outlier Sensitivity</th>
+                    <th className="sticky top-0 bg-[#0C1220] text-secondary">R² Fit</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -124,20 +139,28 @@ export default function Trends() {
                               className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold border inline-flex items-center gap-1"
                               style={{ color: badge.text, backgroundColor: badge.bg, borderColor: badge.border }}
                             >
-                              {trend.direction}
+                              {trend.display_direction || trend.direction}
                             </span>
                           </td>
                           <td className="font-bold" style={{ color: badge.text }}>
                             {formatNumber(trend.trend_score, 0)}
                           </td>
-                          <td className="font-medium text-white">{formatPercent(trend.change_pct, 1)}</td>
+                          <td className="font-medium text-white">{formatPercent(trend.first_to_last_change_pct ?? trend.change_pct, 1)}</td>
                           <td className="text-secondary">{formatPercent(trend.volatility_pct, 1)}</td>
                           <td>
-                            <span className={trend.confidence === 'High' ? 'text-emerald-400 font-semibold' : 'text-secondary'}>
+                            <span className={trend.confidence === 'High' ? 'text-emerald-400 font-semibold' : (trend.confidence === 'Medium' ? 'text-amber-400' : 'text-secondary')}>
                               {trend.confidence}
                             </span>
                           </td>
-                          <td className="capitalize text-secondary">{trend.momentum}</td>
+                          <td>
+                            {trend.outlier_sensitive ? (
+                              <span className="text-[11px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20" title={trend.outlier_sensitivity_note}>
+                                Sensitive
+                              </span>
+                            ) : (
+                              <span className="text-[11px] text-muted">Robust</span>
+                            )}
+                          </td>
                           <td className="text-secondary font-mono text-xs">{formatNumber(trend.r2, 2)}</td>
                         </tr>
                       )

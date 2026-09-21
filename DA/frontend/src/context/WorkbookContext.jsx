@@ -284,6 +284,19 @@ export function WorkbookProvider({ children }) {
     [loadSheetDetail]
   )
 
+  const switchWorkbook = useCallback(
+    async (newId, newName) => {
+      if (!newId) return
+      setWorkbookId(newId)
+      setFilename(newName || 'workbook.xlsx')
+      persist(newId, newName || 'workbook.xlsx')
+      setSelectedSheet('')
+      return refreshAll(newId)
+    },
+    [refreshAll]
+  )
+
+
   const value = {
     workbookId,
     filename,
@@ -310,6 +323,7 @@ export function WorkbookProvider({ children }) {
     refreshAll,
     loadSheetDetail,
     reset,
+    switchWorkbook,
     aiReports,
     setWorkbookAiReport,
     chatMessages,

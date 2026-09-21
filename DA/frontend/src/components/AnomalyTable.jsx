@@ -1,5 +1,6 @@
 import React from 'react'
 import { formatNumber } from '../utils/format'
+import { AlertTriangle, Activity } from 'lucide-react'
 
 export default function AnomalyTable({ rows }) {
   if (!rows || !rows.length) {
@@ -24,40 +25,56 @@ export default function AnomalyTable({ rows }) {
     }
   }
 
-  // Sort: severity first, then most extreme values
+  // Sort: validation violations first, then severity rank, then absolute value
   const severityRank = { Critical: 0, High: 1, Medium: 2, Low: 3 }
   const sorted = [...rows].sort((a, b) => {
+    if (a.validation_violation && !b.validation_violation) return -1
+    if (!a.validation_violation && b.validation_violation) return 1
     const diff = (severityRank[a.severity] ?? 4) - (severityRank[b.severity] ?? 4)
     if (diff !== 0) return diff
     return Math.abs(Number(b.value || 0)) - Math.abs(Number(a.value || 0))
   })
 
   return (
-    <div className="overflow-x-auto max-h-[440px] overflow-y-auto">
-      <table className="table-base">
+    <div className="overflow-x-auto max-h-[460px] overflow-y-auto border border-white/10 rounded-xl">
+      <table className="table-base text-xs">
         <thead>
           <tr>
-            <th className="sticky top-0">Metric</th>
-            <th className="sticky top-0">Row</th>
-            <th className="sticky top-0">Date</th>
-            <th className="sticky top-0">Value</th>
-            <th className="sticky top-0">Type</th>
-            <th className="sticky top-0">Severity</th>
+            <th className="sticky top-0 bg-[#0C1220] z-10 text-secondary">Metric</th>
+            <th className="sticky top-0 bg-[#0C1220] z-10 text-secondary">Row</th>
+            <th className="sticky top-0 bg-[#0C1220] z-10 text-secondary">Date</th>
+            <th className="sticky top-0 bg-[#0C1220] z-10 text-secondary">Value</th>
+            <th className="sticky top-0 bg-[#0C1220] z-10 text-secondary">Nature</th>
+            <th className="sticky top-0 bg-[#0C1220] z-10 text-secondary">Type</th>
+            <th className="sticky top-0 bg-[#0C1220] z-10 text-secondary">Severity</th>
+            <th className="sticky top-0 bg-[#0C1220] z-10 text-secondary">Reason</th>
           </tr>
         </thead>
         <tbody>
           {sorted.map((anomaly, index) => {
             const badge = getSeverityBadge(anomaly.severity)
+            const isViolation = Boolean(anomaly.validation_violation)
             return (
-              <tr key={index}>
-                <td className="font-semibold text-ink">{anomaly.metric}</td>
-                <td className="text-muted font-mono text-xs">{anomaly.row}</td>
-                <td className="text-muted">{anomaly.date || '—'}</td>
-                <td className="font-bold text-ink">{formatNumber(anomaly.value, 2)}</td>
-                <td className="text-muted">{anomaly.type}</td>
+              <tr key={index} className="hover:bg-white/[0.04]">
+                <td className="font-semibold text-white">{anomaly.metric}</td>
+                <td className="text-secondary font-mono text-xs">{anomaly.row}</td>
+                <td className="text-secondary font-mono">{anomaly.date || '—'}</td>
+                <td className="font-bold font-mono text-white">{formatNumber(anomaly.value, 2)}</td>
+                <td>
+                  {isViolation ? (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 inline-flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3" /> Rule Violation
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-blue-500/15 text-blue-300 border border-blue-500/30 inline-flex items-center gap-1">
+                      <Activity className="w-3 h-3" /> Statistical Outlier
+                    </span>
+                  )}
+                </td>
+                <td className="text-secondary">{anomaly.type}</td>
                 <td>
                   <span
-                    className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold border inline-flex items-center"
+                    className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold border inline-flex items-center"
                     style={{
                       color: badge.text,
                       backgroundColor: badge.bg,
@@ -67,6 +84,9 @@ export default function AnomalyTable({ rows }) {
                     {anomaly.severity}
                   </span>
                 </td>
+                <td className="text-secondary text-[11px] max-w-[280px] truncate" title={anomaly.reason}>
+                  {anomaly.reason || (anomaly.methods?.length ? anomaly.methods.join(', ') : 'Statistical deviation')}
+                </td>
               </tr>
             )
           })}
@@ -75,4 +95,3 @@ export default function AnomalyTable({ rows }) {
     </div>
   )
 }
-
