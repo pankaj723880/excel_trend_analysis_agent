@@ -1,5 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { AlertOctagon, Columns, Rows3, Table2, TriangleAlert, Sparkles, ArrowRight } from 'lucide-react'
+import {
+  AlertOctagon,
+  Columns,
+  Rows3,
+  Table2,
+  TriangleAlert,
+  Sparkles,
+  ArrowRight,
+  Plus,
+  LayoutGrid,
+} from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useWorkbook } from '../context/WorkbookContext'
 import {
@@ -11,8 +21,15 @@ import {
   EDAStatistics,
   WorkbookSelector,
   EmptyState,
+  VisualBuilderModal,
+  DashboardVisualCard,
 } from '../components'
-import { generateAISummary } from '../services/api'
+import {
+  generateAISummary,
+  getDashboardConfig,
+  saveDashboardConfig,
+  executeVisualize,
+} from '../services/api'
 import { formatNumber } from '../utils/format'
 
 export default function Dashboard() {
@@ -21,6 +38,170 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [aiResult, setAiResult] = useState(null)
   const [aiLoading, setAiLoading] = useState(false)
+
+  // Dynamic Dashboard Visual Builder State
+  const [visuals, setVisuals] = useState([])
+  const [isBuilderOpen, setIsBuilderOpen] = useState(false)
+  const [editingVisual, setEditingVisual] = useState(null)
+  const [expandedVisualId, setExpandedVisualId] = useState(null)
+  const [dashboardLoading, setDashboardLoading] = useState(false)
+
+  // Load saved dashboard configuration (MongoDB + localStorage fallback)
+  useEffect(() => {
+    if (!workbookId) {
+      setVisuals([])
+      return
+    }
+
+    let active = true
+    setDashboardLoading(true)
+
+    // Check localStorage cache first
+    const localKey = `dashboard_visuals_${workbookId}`
+    try {
+      const cached = localStorage.getItem(localKey)
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setVisuals(parsed)
+        }
+      }
+    } catch (e) {
+      // ignore JSON error
+    }
+
+    // Fetch from backend
+    getDashboardConfig(workbookId)
+      .then(async (res) => {
+        if (!active) return
+        const loadedVisuals = res?.visuals || res?.dashboard?.visuals || []
+        if (Array.isArray(loadedVisuals) && loadedVisuals.length > 0) {
+          // Re-compute visual data for each loaded card
+          const populated = await Promise.all(
+            loadedVisuals.map(async (v) => {
+              try {
+                const computed = await executeVisualize(workbookId, {
+                  sheet: v.sheet,
+                  type: v.type,
+                  title: v.title,
+                  config: v.config,
+                  filters: v.filters || [],
+                })
+                return { ...v, computedResult: computed }
+              } catch (err) {
+                return {
+                  ...v,
+                  computedResult: {
+                    visual_type: v.type,
+                    title: v.title,
+                    data: [],
+                    unsupported_reason: err?.response?.data?.detail || err.message,
+                  },
+                }
+              }
+            })
+          )
+          setVisuals(populated)
+          try {
+            localStorage.setItem(localKey, JSON.stringify(populated))
+          } catch (e) {}
+        }
+      })
+      .catch((err) => {
+        console.warn('Dashboard config load fallback to local:', err)
+      })
+      .finally(() => {
+        if (active) setDashboardLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [workbookId])
+
+  // Save dashboard visuals whenever they change
+  const persistVisuals = (updatedVisuals) => {
+    setVisuals(updatedVisuals)
+    if (!workbookId) return
+
+    // 1. LocalStorage fallback
+    const localKey = `dashboard_visuals_${workbookId}`
+    try {
+      localStorage.setItem(localKey, JSON.stringify(updatedVisuals))
+    } catch (e) {}
+
+    // 2. MongoDB backend sync
+    saveDashboardConfig(workbookId, {
+      visuals: updatedVisuals.map((v) => ({
+        id: v.id,
+        sheet: v.sheet,
+        type: v.type,
+        title: v.title,
+        config: v.config,
+        filters: v.filters || [],
+        style: v.style || v.computedResult?.style || null,
+      })),
+    }).catch((err) => {
+      console.warn('Dashboard backend persistence notice:', err)
+    })
+  }
+
+  // Visual card handlers (immutable functional updates)
+  const handleSaveVisual = (visualItem) => {
+    setVisuals((prev) => {
+      const existingIdx = prev.findIndex((v) => v.id === visualItem.id)
+      let updated
+      if (existingIdx >= 0) {
+        updated = prev.map((v) => (v.id === visualItem.id ? visualItem : v))
+      } else {
+        updated = [...prev, visualItem]
+      }
+      persistVisuals(updated)
+      return updated
+    })
+  }
+
+  const handleDuplicateVisual = (vis) => {
+    setVisuals((prev) => {
+      const duplicated = {
+        ...vis,
+        id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `vis_${Date.now()}_${Math.random().toString(36).substr(2, 7)}`,
+        title: `${vis.title} (Copy)`,
+        created_at: Date.now(),
+        updated_at: Date.now(),
+      }
+      const updated = [...prev, duplicated]
+      persistVisuals(updated)
+      return updated
+    })
+  }
+
+  const handleRemoveVisual = (visId) => {
+    setVisuals((prev) => {
+      const updated = prev.filter((v) => v.id !== visId)
+      persistVisuals(updated)
+      return updated
+    })
+  }
+
+  const handleRefreshVisual = async (vis) => {
+    try {
+      const computed = await executeVisualize(workbookId, {
+        sheet: vis.sheet,
+        type: vis.type,
+        title: vis.title,
+        config: vis.config,
+        filters: vis.filters || [],
+      })
+      setVisuals((prev) => {
+        const updated = prev.map((v) => (v.id === vis.id ? { ...v, computedResult: computed } : v))
+        persistVisuals(updated)
+        return updated
+      })
+    } catch (err) {
+      console.error('Refresh visual error:', err)
+    }
+  }
 
   // Reset AI result when workbook changes
   useEffect(() => {
@@ -130,7 +311,19 @@ export default function Dashboard() {
           <h2 className="text-2xl font-bold text-ink tracking-tight font-sans">Dashboard</h2>
           <p className="text-xs text-secondary/80 mt-0.5">Overview of your workbook and key business insights</p>
         </div>
-        <WorkbookSelector />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              setEditingVisual(null)
+              setIsBuilderOpen(true)
+            }}
+            className="btn-primary text-xs py-2 px-3.5 flex items-center gap-1.5 font-bold shadow-lg shadow-primary/20"
+          >
+            <Plus size={14} />
+            <span>Add New Visual</span>
+          </button>
+          <WorkbookSelector />
+        </div>
       </div>
 
       {/* KPI Cards Row - Workbook Totals vs Active Sheet Level */}
@@ -148,7 +341,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Primary Analytics Grid: 2fr Chart + 1fr AI Insight */}
+      {/* PERMANENT CORE DASHBOARD: Trend Overview (Default Visual) + AI Insight */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="glass-panel p-5 rounded-2xl lg:col-span-2">
           <div className="flex items-center justify-between mb-3">
@@ -156,6 +349,15 @@ export default function Dashboard() {
               <div className="text-[14px] font-bold text-ink">Trend Overview</div>
               <div className="text-[11px] text-muted">Chronological analysis of numeric series across {selectedSheet}</div>
             </div>
+            <button
+              onClick={() => {
+                setEditingVisual(null)
+                setIsBuilderOpen(true)
+              }}
+              className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1 font-bold shadow-md shadow-primary/20"
+            >
+              <Plus size={12} /> Add Visual
+            </button>
           </div>
           {metrics.length ? (
             <TrendChart
@@ -226,6 +428,87 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
+
+      {/* CUSTOM DASHBOARD VISUALIZATIONS SECTION */}
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-[14px] font-bold text-ink">Custom Visualizations</div>
+            <div className="text-[11px] text-muted">
+              {visuals.length > 0
+                ? `${visuals.length} visual${visuals.length > 1 ? 's' : ''} added to your personal dashboard`
+                : 'Add multi-sheet custom charts, metrics, maps, or pivot tables'}
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setEditingVisual(null)
+              setIsBuilderOpen(true)
+            }}
+            className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 font-bold shadow-md shadow-primary/20"
+          >
+            <Plus size={13} />
+            <span>Add New Visual</span>
+          </button>
+        </div>
+
+        {/* Custom Visuals Grid */}
+        {visuals.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+            {visuals.map((vis) => (
+              <DashboardVisualCard
+                key={vis.id}
+                visual={vis}
+                isExpanded={expandedVisualId === vis.id}
+                onToggleResize={() =>
+                  setExpandedVisualId(expandedVisualId === vis.id ? null : vis.id)
+                }
+                onEdit={() => {
+                  setEditingVisual(vis)
+                  setIsBuilderOpen(true)
+                }}
+                onDuplicate={() => handleDuplicateVisual(vis)}
+                onRemove={() => handleRemoveVisual(vis.id)}
+                onRefresh={() => handleRefreshVisual(vis)}
+              />
+            ))}
+          </div>
+        ) : (
+          /* Clean Empty Call-to-action for Custom Visuals */
+          <div className="glass-panel p-6 rounded-2xl border border-dashed border-white/10 flex flex-col items-center justify-center text-center space-y-2">
+            <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mb-1">
+              <LayoutGrid size={20} />
+            </div>
+            <h4 className="text-sm font-bold text-ink">No custom visuals added yet</h4>
+            <p className="text-xs text-muted max-w-sm">
+              Keep the core Trend Overview above while creating additional charts, scorecards, pie charts, scatter plots, or matrices.
+            </p>
+            <button
+              onClick={() => {
+                setEditingVisual(null)
+                setIsBuilderOpen(true)
+              }}
+              className="mt-2 btn-primary text-xs py-2 px-4 flex items-center gap-1.5 font-bold shadow-lg shadow-primary/20"
+            >
+              <Plus size={13} />
+              <span>+ Add New Visual</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Visual Builder Modal */}
+      <VisualBuilderModal
+        isOpen={isBuilderOpen}
+        onClose={() => {
+          setIsBuilderOpen(false)
+          setEditingVisual(null)
+        }}
+        workbookId={workbookId}
+        sheets={sheets}
+        initialVisual={editingVisual}
+        onSaveVisual={handleSaveVisual}
+      />
 
       {/* Secondary Analytics: EDA Overview & Data Quality */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

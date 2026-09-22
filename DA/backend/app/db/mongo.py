@@ -130,6 +130,10 @@ def get_reports_collection():
     return get_db()["reports"]
 
 
+def get_dashboards_collection():
+    return get_db()["dashboards"]
+
+
 def validate_mongo_connection() -> bool:
     """Validates connection to MongoDB cluster by pinging the server.
     

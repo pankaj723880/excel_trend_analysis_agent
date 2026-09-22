@@ -398,3 +398,76 @@ async def clean_workbook_endpoint(workbook_id: str, request: CleanRequest):
         "status": "cleaned",
         "cleaning_report": report_dict,
     }
+
+
+# =========================================================================
+# DYNAMIC DASHBOARD VISUAL BUILDER ENDPOINTS
+# =========================================================================
+
+@router.get("/{workbook_id}/schema/{sheet_name}")
+async def get_sheet_visual_schema_endpoint(workbook_id: str, sheet_name: str):
+    """Returns rich, dynamic column metadata for the selected sheet."""
+    entry = _get_active_entry(workbook_id)
+    wb = entry.get("cleaned_copy") or entry.get("workbook") or {}
+    df = wb.get(sheet_name)
+    if df is None:
+        raise HTTPException(status_code=404, detail=f"Sheet '{sheet_name}' not found in workbook.")
+
+    from app.services.visual_engine import detect_column_metadata
+    columns = detect_column_metadata(df)
+    return {
+        "workbook_id": workbook_id,
+        "sheet_name": sheet_name,
+        "row_count": len(df),
+        "column_count": len(df.columns),
+        "columns": columns,
+    }
+
+
+@router.post("/{workbook_id}/visualize")
+async def visualize_endpoint(workbook_id: str, payload: dict):
+    """Executes deterministic visualization query on selected worksheet data."""
+    entry = _get_active_entry(workbook_id)
+    wb = entry.get("cleaned_copy") or entry.get("workbook") or {}
+
+    sheet_name = payload.get("sheet")
+    if not sheet_name:
+        # Default to first sheet
+        sheet_names = list(wb.keys())
+        if not sheet_names:
+            raise HTTPException(status_code=400, detail="Workbook has no sheets.")
+        sheet_name = sheet_names[0]
+
+    df = wb.get(sheet_name)
+    if df is None:
+        raise HTTPException(status_code=404, detail=f"Sheet '{sheet_name}' not found.")
+
+    visual_type = payload.get("type", "bar")
+    config = payload.get("config", {})
+    filters = payload.get("filters", [])
+
+    from app.services.visual_engine import execute_visual_query
+    result = execute_visual_query(df, visual_type, config, filters)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+
+    return result
+
+
+@router.get("/{workbook_id}/dashboard")
+async def get_dashboard_endpoint(workbook_id: str):
+    """Loads saved dashboard configuration for the workbook."""
+    _get_active_entry(workbook_id)
+    from app.services.store import get_dashboard
+    return get_dashboard(workbook_id)
+
+
+@router.post("/{workbook_id}/dashboard")
+async def save_dashboard_endpoint(workbook_id: str, payload: dict):
+    """Persists customized dashboard visuals to MongoDB and in-memory store."""
+    _get_active_entry(workbook_id)
+    visuals = payload.get("visuals", [])
+    layout = payload.get("layout", {})
+    from app.services.store import save_dashboard
+    saved = save_dashboard(workbook_id, visuals, layout)
+    return {"status": "ok", "workbook_id": workbook_id, "dashboard": saved}

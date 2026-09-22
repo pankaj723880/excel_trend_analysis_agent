@@ -283,4 +283,26 @@ export async function refreshMisData(workbookId) {
   return data
 }
 
+// ---------- Dynamic Dashboard Visual Builder ----------
+
+export async function getSheetVisualSchema(workbookId, sheetName) {
+  const { data } = await client.get(`/workbooks/${workbookId}/schema/${encodeURIComponent(sheetName)}`)
+  return data
+}
+
+export async function executeVisualize(workbookId, payload) {
+  const { data } = await client.post(`/workbooks/${workbookId}/visualize`, payload)
+  return data
+}
+
+export async function getDashboardConfig(workbookId) {
+  const { data } = await client.get(`/workbooks/${workbookId}/dashboard`)
+  return data
+}
+
+export async function saveDashboardConfig(workbookId, payload) {
+  const { data } = await client.post(`/workbooks/${workbookId}/dashboard`, payload)
+  return data
+}
+
 export default client

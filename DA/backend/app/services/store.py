@@ -252,3 +252,40 @@ def list_stored_workbooks() -> list[dict]:
         return results
 
 
+def save_dashboard(workbook_id: str, visuals: list[dict], layout: dict | None = None) -> dict:
+    """Stores dashboard config in memory and syncs to MongoDB."""
+    with _LOCK:
+        if workbook_id in _STORE:
+            _STORE[workbook_id]["dashboard"] = {
+                "visuals": visuals,
+                "layout": layout or {},
+                "updated_at": time.time(),
+            }
+
+    try:
+        from app.services.mongo_store import save_dashboard_to_mongo
+        return save_dashboard_to_mongo(workbook_id, visuals, layout)
+    except Exception:
+        return {"workbook_id": workbook_id, "visuals": visuals, "layout": layout}
+
+
+def get_dashboard(workbook_id: str) -> dict:
+    """Retrieves dashboard config from in-memory store or MongoDB."""
+    with _LOCK:
+        if workbook_id in _STORE and "dashboard" in _STORE[workbook_id]:
+            return _STORE[workbook_id]["dashboard"]
+
+    try:
+        from app.services.mongo_store import load_dashboard_from_mongo
+        db_dash = load_dashboard_from_mongo(workbook_id)
+        if db_dash:
+            with _LOCK:
+                if workbook_id in _STORE:
+                    _STORE[workbook_id]["dashboard"] = db_dash
+            return db_dash
+    except Exception:
+        pass
+
+    return {"visuals": [], "layout": {}}
+
+

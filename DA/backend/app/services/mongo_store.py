@@ -528,3 +528,57 @@ def load_all_workbooks_from_mongo(user_id: str = DEFAULT_USER_ID) -> list[dict[s
         results.append(doc)
     return results
 
+
+def save_dashboard_to_mongo(
+    workbook_id: str,
+    visuals: list[dict[str, Any]],
+    layout: dict[str, Any] | None = None,
+    user_id: str = DEFAULT_USER_ID,
+) -> dict[str, Any]:
+    """Persists customized dashboard visuals array to MongoDB dashboards collection."""
+    try:
+        from app.db.mongo import get_dashboards_collection
+        if not validate_mongo_connection():
+            return {"workbook_id": workbook_id, "visuals": visuals, "layout": layout}
+
+        sanitized_visuals = _sanitize_for_mongo(visuals)
+        sanitized_layout = _sanitize_for_mongo(layout or {})
+        
+        doc = {
+            "workbook_id": workbook_id,
+            "user_id": user_id,
+            "visuals": sanitized_visuals,
+            "layout": sanitized_layout,
+            "updated_at": time.time(),
+        }
+        
+        get_dashboards_collection().update_one(
+            {"workbook_id": workbook_id, "user_id": user_id},
+            {"$set": doc, "$setOnInsert": {"created_at": time.time()}},
+            upsert=True,
+        )
+        return doc
+    except Exception as exc:
+        logger.warning(f"Failed to save dashboard to MongoDB: {exc}")
+        return {"workbook_id": workbook_id, "visuals": visuals, "layout": layout}
+
+
+def load_dashboard_from_mongo(
+    workbook_id: str,
+    user_id: str = DEFAULT_USER_ID,
+) -> dict[str, Any] | None:
+    """Loads customized dashboard visuals array from MongoDB dashboards collection."""
+    try:
+        from app.db.mongo import get_dashboards_collection
+        if not validate_mongo_connection():
+            return None
+
+        doc = get_dashboards_collection().find_one({"workbook_id": workbook_id, "user_id": user_id})
+        if doc:
+            doc["_id"] = str(doc["_id"])
+            return doc
+        return None
+    except Exception as exc:
+        logger.warning(f"Failed to load dashboard from MongoDB: {exc}")
+        return None
+

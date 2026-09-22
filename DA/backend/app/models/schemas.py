@@ -54,3 +54,44 @@ class CleanedChartRequest(BaseModel):
 
 class ErrorResponse(BaseModel):
     detail: str
+
+
+class VisualFilter(BaseModel):
+    column: str
+    operator: str = "equals"  # equals | not_equals | in | > | >= | < | <= | between
+    value: Any
+
+
+class VisualConfigRequest(BaseModel):
+    sheet: str
+    type: str  # bar, column, line, area, combo, pie, doughnut, treemap, scorecard, gauge, bullet, scatter, bubble, histogram, map, funnel, sankey, table, matrix
+    title: Optional[str] = None
+    config: dict[str, Any] = {}
+    filters: list[VisualFilter] = []
+    style: Optional[dict[str, Any]] = None
+
+
+class VisualQueryResponse(BaseModel):
+    visual_type: str
+    title: str
+    data: list[Any] = []
+    metadata: dict[str, Any] = {}
+    unsupported_reason: Optional[str] = None
+
+
+class DashboardVisualItem(BaseModel):
+    id: str
+    sheet: str
+    type: str
+    title: str
+    config: dict[str, Any] = {}
+    filters: list[dict[str, Any]] = []
+    style: Optional[dict[str, Any]] = None
+    layout: Optional[dict[str, Any]] = None
+    created_at: Optional[float] = None
+    updated_at: Optional[float] = None
+
+
+class DashboardPersistRequest(BaseModel):
+    visuals: list[DashboardVisualItem] = []
+    layout: Optional[dict[str, Any]] = None
