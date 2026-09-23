@@ -73,7 +73,7 @@ const NAV_GROUPS = [
 ]
 
 export default function Sidebar() {
-  const { filename, sheets, overview, sidebarCollapsed, toggleSidebar } = useWorkbook()
+  const { workbookId, filename, sheets, overview, sidebarCollapsed, toggleSidebar } = useWorkbook()
   const collapsed = !!sidebarCollapsed
 
   return (
@@ -108,32 +108,30 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation Sections */}
-      <nav className="flex-1 py-4 px-2.5 space-y-4 overflow-y-auto">
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5 scrollbar-thin">
         {NAV_GROUPS.map((group) => (
-          <div key={group.label}>
+          <div key={group.label} className="space-y-1">
             {!collapsed && (
-              <div className="text-[10px] font-bold uppercase tracking-wider text-muted/60 px-2.5 mb-1.5 flex items-center justify-between">
-                <span>{group.label}</span>
+              <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-muted/60 mb-1.5">
+                {group.label}
               </div>
             )}
             <div className="space-y-0.5">
               {group.items.map((item) => (
                 <NavLink
-                  key={item.to + item.label}
+                  key={item.to}
                   to={item.to}
                   end={item.end}
-                  title={collapsed ? item.label : undefined}
                   className={({ isActive }) =>
-                    `group relative flex items-center gap-2.5 rounded-lg transition-all duration-150 ${
-                      collapsed ? 'justify-center p-2.5' : 'px-2.5 py-2 text-[12px]'
-                    } ${
+                    `flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all group relative ${
                       isActive
                         ? item.isAi
-                          ? 'bg-ai/15 text-ink font-semibold border border-ai/30 shadow-glow-purple'
-                          : 'bg-primary/15 text-ink font-semibold border border-primary/30 shadow-glow-blue'
-                        : 'text-secondary/70 hover:text-ink hover:bg-white/[0.04] font-medium'
-                    }`
+                          ? 'bg-ai/15 text-white font-semibold border border-ai/30 shadow-glow-purple'
+                          : 'bg-primary/15 text-white font-semibold border border-primary/30 shadow-glow-blue'
+                        : 'text-secondary hover:text-ink hover:bg-white/[0.04]'
+                    } ${collapsed ? 'justify-center px-0' : ''}`
                   }
+                  title={collapsed ? item.label : undefined}
                 >
                   {({ isActive }) => (
                     <>
@@ -168,7 +166,7 @@ export default function Sidebar() {
           <div className="text-[10px] font-bold uppercase tracking-wider text-muted mb-2 px-1">
             Current Workbook
           </div>
-          {filename ? (
+          {workbookId && filename ? (
             <div className="p-2.5 rounded-xl border border-white/10 bg-white/[0.03] backdrop-blur-md">
               <div className="flex items-start gap-2">
                 <FileSpreadsheet size={15} className="text-primary mt-0.5 shrink-0" />
@@ -187,21 +185,28 @@ export default function Sidebar() {
               </div>
             </div>
           ) : (
-            <NavLink
-              to="/upload"
-              className="p-2.5 rounded-xl border border-dashed border-white/15 bg-white/[0.02] hover:bg-white/[0.05] hover:border-primary/40 block text-center transition-all cursor-pointer group"
-            >
-              <div className="text-[12px] font-medium text-secondary group-hover:text-primary flex items-center justify-center gap-1.5">
-                <UploadCloud size={14} /> Upload Excel
+            <div className="p-3 rounded-xl border border-white/10 bg-white/[0.02] text-left">
+              <div className="text-[12px] font-semibold text-ink">
+                No workbook loaded
               </div>
-            </NavLink>
+              <p className="text-[11px] text-muted mt-1 leading-relaxed">
+                Upload an Excel file to start analysis.
+              </p>
+              <NavLink
+                to="/upload"
+                className="mt-3 btn-primary w-full py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+              >
+                <UploadCloud size={13} />
+                <span>Upload Excel</span>
+              </NavLink>
+            </div>
           )}
         </div>
       ) : (
         <div className="p-2 border-t border-white/10 flex justify-center">
           <NavLink
             to="/upload"
-            title={filename || 'Upload Workbook'}
+            title={workbookId && filename ? filename : 'Upload Workbook'}
             className="h-10 w-10 rounded-xl border border-white/10 hover:border-primary/40 bg-white/[0.03] flex items-center justify-center text-primary"
           >
             <FileSpreadsheet size={17} />

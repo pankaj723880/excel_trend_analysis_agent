@@ -25,7 +25,7 @@ const ROUTE_LABELS = {
 }
 
 export default function Header() {
-  const { filename, overview, handleUpload, refreshWorkbook, toggleSidebar, sidebarCollapsed } = useWorkbook()
+  const { workbookId, filename, overview, handleUpload, refreshWorkbook, toggleSidebar, sidebarCollapsed } = useWorkbook()
   const { themeMode, setThemeMode } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
@@ -122,7 +122,7 @@ export default function Header() {
 
       {/* Right: Status Pill & Consolidated Actions */}
       <div className="flex items-center gap-2.5 relative shrink-0" ref={settingsRef}>
-        {filename ? (
+        {workbookId && filename ? (
           <div className="hidden md:flex items-center gap-2 text-[12px] bg-white/[0.03] border border-white/[0.08] hover:border-white/[0.15] px-3 py-1.5 rounded-full backdrop-blur-md transition-colors">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-positive opacity-75" />
@@ -136,8 +136,8 @@ export default function Header() {
           </div>
         ) : (
           <div className="hidden md:flex items-center gap-2 text-[11.5px] bg-white/[0.02] border border-white/[0.06] px-3 py-1.5 rounded-full text-muted backdrop-blur-md">
-            <span className="h-1.5 w-1.5 rounded-full bg-warning" />
-            <span>Ready for Excel</span>
+            <span className="h-1.5 w-1.5 rounded-full bg-muted/60" />
+            <span>No workbook loaded</span>
           </div>
         )}
 

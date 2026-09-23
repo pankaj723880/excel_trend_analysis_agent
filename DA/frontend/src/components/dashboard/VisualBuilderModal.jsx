@@ -103,6 +103,34 @@ export default function VisualBuilderModal({
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewError, setPreviewError] = useState(null)
 
+  // Lock body scroll and handle Escape key while modal is open
+  useEffect(() => {
+    if (!isOpen) return
+
+    const previousOverflow = document.body.style.overflow
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+    const previousPaddingRight = document.body.style.paddingRight
+
+    document.body.style.overflow = 'hidden'
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`
+    }
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose?.()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.body.style.paddingRight = previousPaddingRight
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isOpen, onClose])
+
   // Populate existing visual when editing
   useEffect(() => {
     if (initialVisual) {
@@ -309,8 +337,19 @@ export default function VisualBuilderModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-md animate-fade-in">
-      <div className="glass-panel w-full max-w-4xl max-h-[92vh] rounded-3xl flex flex-col shadow-2xl border border-white/10 overflow-hidden bg-[#090E1A]/95">
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 select-none"
+      role="dialog"
+      aria-modal="true"
+    >
+      {/* Viewport Backdrop */}
+      <div
+        className="fixed inset-0 z-[9998] bg-black/75 backdrop-blur-sm transition-opacity"
+        aria-hidden="true"
+      />
+
+      {/* Modal Dialog Content Container (non-draggable, stays on screen, internal scroll only) */}
+      <div className="relative z-[9999] glass-panel w-full max-w-4xl max-h-[85vh] rounded-3xl flex flex-col shadow-2xl border border-white/10 overflow-hidden bg-[#090E1A]/95 animate-fade-in-up">
         {/* Header */}
         <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
           <div>

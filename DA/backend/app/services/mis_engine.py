@@ -414,7 +414,7 @@ def compute_sales_mis(workbook: dict[str, pd.DataFrame], mapping: dict, filters:
         rev_cnt = df.groupby(salesperson_col)[rev_col].count()
         grp = pd.DataFrame({
             salesperson_col: rev_sum.index,
-            "revenue": pd.to_numeric(rev_sum.values, errors="coerce").fillna(0),
+            "revenue": pd.to_numeric(rev_sum, errors="coerce").fillna(0).values,
             "orders": rev_cnt.values,
         }).sort_values(by="revenue", ascending=False).head(10)
 

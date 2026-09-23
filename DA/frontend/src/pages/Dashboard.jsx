@@ -23,6 +23,7 @@ import {
   EmptyState,
   VisualBuilderModal,
   DashboardVisualCard,
+  WorkbookRequiredModal,
 } from '../components'
 import {
   generateAISummary,
@@ -290,9 +291,30 @@ export default function Dashboard() {
 
   if (!workbookId) {
     return (
-      <div>
-        <h2 className="text-lg font-bold text-ink mb-5">Dashboard</h2>
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 pb-1">
+          <div>
+            <h2 className="text-2xl font-bold text-ink tracking-tight font-sans">Dashboard</h2>
+            <p className="text-xs text-secondary/80 mt-0.5">Overview of your workbook and key business insights</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsBuilderOpen(true)}
+              className="btn-primary text-xs py-2 px-3.5 flex items-center gap-1.5 font-bold shadow-lg shadow-primary/20 cursor-pointer"
+            >
+              <Plus size={14} />
+              <span>+ Add New Visual</span>
+            </button>
+          </div>
+        </div>
+
         <EmptyState />
+
+        {/* Workbook Required Modal when user clicks Add New Visual without an active workbook */}
+        <WorkbookRequiredModal
+          isOpen={isBuilderOpen}
+          onClose={() => setIsBuilderOpen(false)}
+        />
       </div>
     )
   }

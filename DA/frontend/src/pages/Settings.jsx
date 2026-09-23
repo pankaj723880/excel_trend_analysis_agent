@@ -1,20 +1,105 @@
-import React, { useState } from 'react';
-import { Settings as SettingsIcon, Shield, Sliders, Database, Sparkles, Bell, Check, Key } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react'
+import {
+  Settings as SettingsIcon,
+  Shield,
+  Database,
+  Sparkles,
+  Check,
+  RotateCcw,
+  AlertTriangle,
+} from 'lucide-react'
+import {
+  DEFAULT_SETTINGS,
+  IQR_SENSITIVITY_OPTIONS,
+  loadSavedSettings,
+  persistSettings,
+} from '../constants/settings'
 
 export default function Settings() {
-  const [saved, setSaved] = useState(false);
-  const [modelTemp, setModelTemp] = useState(0.2);
-  const [autoProfile, setAutoProfile] = useState(true);
-  const [anomalyThreshold, setAnomalyThreshold] = useState('1.5');
+  // Single settings state initialized from storage (survives page refresh)
+  const [settings, setSettings] = useState(() => loadSavedSettings())
 
-  const handleSave = (e) => {
-    e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
+  // Toast / notification state
+  const [toast, setToast] = useState(null)
+  const toastTimerRef = useRef(null)
+
+  // Clear toast on unmount
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current)
+      }
+    }
+  }, [])
+
+  const showToast = (message, type = 'success') => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    setToast({ message, type })
+    toastTimerRef.current = setTimeout(() => {
+      setToast(null)
+    }, 3500)
+  }
+
+  // Update a single setting in controlled form state
+  const handleChange = (key, value) => {
+    setSettings((prev) => ({
+      ...prev,
+      [key]: value,
+    }))
+  }
+
+  // Action 1: Save currently selected settings
+  const handleSavePreferences = (e) => {
+    e.preventDefault()
+    const success = persistSettings(settings)
+    if (success) {
+      showToast('Preferences saved successfully', 'success')
+    } else {
+      showToast('Failed to save preferences to storage', 'error')
+    }
+  }
+
+  // Action 2: Reset Defaults (separate action)
+  const handleResetDefaults = () => {
+    // Non-mutating copy of canonical defaults
+    const defaults = { ...DEFAULT_SETTINGS }
+
+    // 1. Immediately update all controlled React form state
+    setSettings(defaults)
+
+    // 2. Persist defaults to storage with defensive error handling
+    const persisted = persistSettings(defaults)
+
+    // 3. Inform user with toast
+    if (persisted) {
+      showToast('Settings reset to defaults', 'success')
+    } else {
+      showToast('Defaults applied locally, but could not be saved.', 'warning')
+    }
+  }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-4xl animate-fade-in-up relative">
+      {/* Toast Notification */}
+      {toast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-2xl backdrop-blur-md transition-all duration-300 animate-fade-in-up ${
+            toast.type === 'success'
+              ? 'bg-emerald-950/90 border-emerald-500/30 text-emerald-200'
+              : toast.type === 'warning'
+              ? 'bg-amber-950/90 border-amber-500/30 text-amber-200'
+              : 'bg-rose-950/90 border-rose-500/30 text-rose-200'
+          }`}
+        >
+          {toast.type === 'success' && <Check className="w-4 h-4 text-emerald-400 shrink-0" />}
+          {toast.type === 'warning' && <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />}
+          {toast.type === 'error' && <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />}
+          <span className="text-xs font-semibold">{toast.message}</span>
+        </div>
+      )}
+
       <div>
         <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
           <SettingsIcon className="w-6 h-6 text-primary" /> Workspace Settings
@@ -24,7 +109,7 @@ export default function Settings() {
         </p>
       </div>
 
-      <form onSubmit={handleSave} className="space-y-6">
+      <form onSubmit={handleSavePreferences} className="space-y-6">
         {/* Section 1: AI Engine Configuration */}
         <div className="glass-panel p-6 space-y-4">
           <div className="flex items-center gap-2.5 border-b border-glass-border pb-3">
@@ -37,20 +122,31 @@ export default function Settings() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-secondary">Inference Temperature</label>
+              <label htmlFor="aiTemperature" className="text-xs font-medium text-secondary">
+                Inference Temperature
+              </label>
               <div className="flex items-center gap-3">
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="0.7" 
+                <input
+                  id="aiTemperature"
+                  name="aiTemperature"
+                  type="range"
+                  min="0"
+                  max="0.7"
                   step="0.05"
-                  value={modelTemp} 
-                  onChange={(e) => setModelTemp(parseFloat(e.target.value))}
+                  value={settings.aiTemperature}
+                  onChange={(e) => handleChange('aiTemperature', parseFloat(e.target.value))}
                   className="w-full accent-ai cursor-pointer"
                 />
-                <span className="text-xs font-mono text-white bg-white/5 px-2 py-1 rounded border border-glass-border">{modelTemp}</span>
+                <span
+                  data-testid="temperature-display"
+                  className="text-xs font-mono text-white bg-white/5 px-2.5 py-1 rounded border border-glass-border min-w-[42px] text-center"
+                >
+                  {settings.aiTemperature}
+                </span>
               </div>
-              <p className="text-[11px] text-muted">Lower values ensure strict factual grounding with zero creative drift.</p>
+              <p className="text-[11px] text-muted">
+                Lower values ensure strict factual grounding with zero creative drift.
+              </p>
             </div>
 
             <div className="space-y-1.5">
@@ -75,29 +171,36 @@ export default function Settings() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-secondary">IQR Outlier Sensitivity</label>
-              <select 
-                value={anomalyThreshold}
-                onChange={(e) => setAnomalyThreshold(e.target.value)}
-                className="w-full bg-[#070B14] border border-glass-border rounded-lg text-xs text-white px-3 py-2 focus:outline-none focus:border-primary"
+              <label htmlFor="iqrSensitivity" className="text-xs font-medium text-secondary">
+                IQR Outlier Sensitivity
+              </label>
+              <select
+                id="iqrSensitivity"
+                name="iqrSensitivity"
+                value={settings.iqrSensitivity}
+                onChange={(e) => handleChange('iqrSensitivity', e.target.value)}
+                className="w-full bg-[#070B14] border border-glass-border rounded-lg text-xs text-white px-3 py-2 focus:outline-none focus:border-primary cursor-pointer"
               >
-                <option value="1.5">Standard (1.5x IQR - Moderate)</option>
-                <option value="3.0">Strict (3.0x IQR - Extreme Only)</option>
-                <option value="1.0">High Sensitivity (1.0x IQR - Wide Filter)</option>
+                {IQR_SENSITIVITY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
               </select>
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-secondary">Automatic Sheet Profiling</label>
               <div className="flex items-center gap-3 pt-2">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   id="autoProf"
-                  checked={autoProfile}
-                  onChange={(e) => setAutoProfile(e.target.checked)}
+                  name="autoProf"
+                  checked={settings.autoProfile}
+                  onChange={(e) => handleChange('autoProfile', e.target.checked)}
                   className="rounded border-glass-border bg-transparent text-primary focus:ring-primary w-4 h-4 cursor-pointer"
                 />
-                <label htmlFor="autoProf" className="text-xs text-secondary cursor-pointer">
+                <label htmlFor="autoProf" className="text-xs text-secondary cursor-pointer select-none">
                   Automatically profile dataset upon workbook switch
                 </label>
               </div>
@@ -105,16 +208,26 @@ export default function Settings() {
           </div>
         </div>
 
+        {/* Actions Bar */}
         <div className="flex justify-end gap-3 pt-2">
-          <button type="button" className="btn-secondary text-xs px-4 py-2">
-            Reset Defaults
+          <button
+            type="button"
+            onClick={handleResetDefaults}
+            className="btn-secondary text-xs px-4 py-2 flex items-center gap-1.5 cursor-pointer hover:border-white/20 active:scale-95 transition-all"
+            title="Restore all settings to default values"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-muted" />
+            <span>Reset Defaults</span>
           </button>
-          <button type="submit" className="btn-primary text-xs px-5 py-2 flex items-center gap-2">
-            {saved ? <Check className="w-4 h-4" /> : null}
-            {saved ? 'Preferences Saved' : 'Save Preferences'}
+          <button
+            type="submit"
+            className="btn-primary text-xs px-5 py-2 flex items-center gap-2 cursor-pointer shadow-lg shadow-primary/20 active:scale-95 transition-all"
+          >
+            <Check className="w-4 h-4" />
+            <span>Save Preferences</span>
           </button>
         </div>
       </form>
     </div>
-  );
+  )
 }

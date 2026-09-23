@@ -10,6 +10,7 @@ import {
   listWorkbooks,
   uploadWorkbook,
 } from '../services/api'
+import { loadSavedSettings } from '../constants/settings'
 
 const WorkbookContext = createContext(null)
 
@@ -127,7 +128,8 @@ export function WorkbookProvider({ children }) {
         return firstSheet
       })
 
-      if (activeSheet) {
+      const shouldProfile = loadSavedSettings().autoProfile !== false
+      if (activeSheet && shouldProfile) {
         getSheetDetail(id, activeSheet).then((detail) => setSheetDetail(detail)).catch(() => {})
       }
 
@@ -150,23 +152,17 @@ export function WorkbookProvider({ children }) {
       if (status === 404) {
         setWorkbookId(null)
         setFilename(null)
+        setOverview(null)
+        setSheets([])
+        setSelectedSheet('')
+        setAnalysis(null)
+        setSheetDetail(null)
+        setEdaData(null)
+        setTrendsData(null)
+        setAnomaliesData(null)
+        setCorrelationsData(null)
         persist(null, null)
         setAnalysisStage(0)
-
-        try {
-          const listRes = await listWorkbooks()
-          if (listRes?.workbooks && listRes.workbooks.length > 0) {
-            const firstWb = listRes.workbooks[0]
-            const newId = firstWb.workbook_id
-            const newName = firstWb.filename
-            setWorkbookId(newId)
-            setFilename(newName)
-            persist(newId, newName)
-            return refreshAll(newId)
-          }
-        } catch (lErr) {
-          console.error("Could not fetch fallback workbooks:", lErr)
-        }
       }
       setError(err?.response?.data?.detail || err.message || 'Could not load analysis')
       return null
@@ -176,22 +172,13 @@ export function WorkbookProvider({ children }) {
     }
   }, [])
 
-  // Restore session on mount
+  // Restore session on mount ONLY if an existing workbook was previously active
   useEffect(() => {
     if (workbookId) {
       refreshAll(workbookId)
     } else {
-      listWorkbooks()
-        .then((res) => {
-          if (res?.workbooks && res.workbooks.length > 0) {
-            const firstWb = res.workbooks[0]
-            setWorkbookId(firstWb.workbook_id)
-            setFilename(firstWb.filename)
-            persist(firstWb.workbook_id, firstWb.filename)
-            refreshAll(firstWb.workbook_id)
-          }
-        })
-        .catch(() => {})
+      // If no workbook is stored, ensure everything is clean null
+      persist(null, null)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -279,7 +266,10 @@ export function WorkbookProvider({ children }) {
   const selectSheet = useCallback(
     (name) => {
       setSelectedSheet(name)
-      loadSheetDetail(name)
+      const shouldProfile = loadSavedSettings().autoProfile !== false
+      if (shouldProfile) {
+        loadSheetDetail(name)
+      }
     },
     [loadSheetDetail]
   )
